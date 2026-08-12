@@ -25,17 +25,21 @@ function todayISO(){ return new Date().toISOString().slice(0,10); }
 function esNum(n, dec=0){ return Number(n).toLocaleString('de-DE', {minimumFractionDigits:dec, maximumFractionDigits:dec}); }
 function fmtUSD(n){ return '$' + esNum(n, 2) + ' USD'; }
 
-async function graph(path, params, tries=4){
+// Códigos que reintentamos: errores temporales de Meta + límites de velocidad
+// (80000-80009 = "too many calls"; 4/17/32/613 = throttling de app/usuario/página).
+const RETRYABLE = [1,2,4,17,32,341,368,613,80000,80001,80002,80003,80004,80005,80006,80008,80009];
+async function graph(path, params, tries=6){
   const usp = new URLSearchParams({ ...params, access_token: TOKEN });
   let lastErr;
   for (let a=0; a<tries; a++){
-    if (a) await sleep(a*3000);
+    // backoff creciente ante bloqueos: 0s, 8s, 32s, 60s, 60s, 60s
+    if (a) await sleep(Math.min(60000, a*a*8000));
     try{
       const res = await fetch(`${API}/${path}?${usp.toString()}`);
       const json = await res.json();
       if (json.error){
         lastErr = new Error(`Graph error: ${JSON.stringify(json.error).slice(0,300)}`);
-        if (![1,2,4,17,341,368].includes(json.error.code)) throw lastErr;
+        if (!RETRYABLE.includes(json.error.code)) throw lastErr;
         continue;
       }
       return json;
@@ -147,6 +151,7 @@ function toReportRow(r, acc){
       rows.forEach(r => r.__acc = acc);
       weeklyRaw = weeklyRaw.concat(rows);
       start = isoAddDays(start, CHUNK_WEEKS*7);
+      await sleep(600); // pausa para no saturar el límite de Meta
     }
     // MONTHLY mes por mes
     { let y=2026, mo=1;
@@ -160,6 +165,7 @@ function toReportRow(r, acc){
         rows.forEach(r => r.__acc = acc);
         monthlyRaw = monthlyRaw.concat(rows);
         mo++; if (mo>12){ mo=1; y++; }
+        await sleep(600); // pausa para no saturar el límite de Meta
       }
     }
     // Campañas + creativos de esta cuenta
