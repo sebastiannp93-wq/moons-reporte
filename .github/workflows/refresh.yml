@@ -1,0 +1,34 @@
+name: Refrescar reporte Moons
+
+on:
+  schedule:
+    - cron: '0 12 * * *'    # todos los días 12:00 UTC (7:00 a.m. Colombia)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generar datos desde Meta
+        env:
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+        run: node fetch-data.js
+
+      - name: Publicar los datos actualizados
+        run: |
+          git config user.name "moons-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add futura-data.js
+          git commit -m "Datos actualizados $(date -u +%Y-%m-%d)" || echo "Sin cambios"
+          git push
