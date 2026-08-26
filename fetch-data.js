@@ -12,9 +12,14 @@ const YEAR_START_MONDAY = '2025-12-29';
 const CHUNK_WEEKS = 4;
 const PREVIEW_MAX = 60;
 const ANTICIPO_CC = '828103137997978';   // conversión personalizada = evento Anticipo
+// --- Eventos del funnel (nombres del píxel personalizado) ---
+const LEAD_EVENT     = 'Lead-Server';    // evento de lead elegido (server-side, píxel personalizado)
+const VENTA_EVENT    = 'Venta';          // venta (bonus, píxel personalizado)
+// "Checkout WebView" es una CONVERSIÓN PERSONALIZADA con id distinto por país (regla por URL):
+//   MX -> checkout.mymoons.mx (id 278309118394084) ; CO -> checkout.mymoons.co (id 1406103876985688)
 const ACCOUNTS = [
-  { id: '285086213215776', country: 'CO', currency: 'cop' },
-  { id: '633488553830053', country: 'MX', currency: 'mxn' },
+  { id: '285086213215776', country: 'CO', currency: 'cop', checkoutCC: '1406103876985688' },
+  { id: '633488553830053', country: 'MX', currency: 'mxn', checkoutCC: '278309118394084' },
 ];
 
 if (!TOKEN) { console.error('FALTA META_TOKEN'); process.exit(1); }
@@ -74,6 +79,31 @@ function linkClicks(actions){
   const a = actions.find(x => x.action_type === 'link_click');
   return a ? (parseFloat(a.value)||0) : 0;
 }
+// --- Pasos del funnel ---
+function landingViews(actions){
+  if (!Array.isArray(actions)) return 0;
+  const a = actions.find(x => x.action_type === 'landing_page_view');
+  return a ? (parseFloat(a.value)||0) : 0;
+}
+// eventos personalizados del píxel: offsite_conversion.fb_pixel_custom.<Nombre>
+function pixelCustom(actions, name){
+  if (!Array.isArray(actions) || !name) return 0;
+  const a = actions.find(x => x.action_type === `offsite_conversion.fb_pixel_custom.${name}`);
+  return a ? (parseFloat(a.value)||0) : 0;
+}
+// conversión personalizada por id: offsite_conversion.custom.<id>
+function customConv(actions, id){
+  if (!Array.isArray(actions) || !id) return 0;
+  const a = actions.find(x => x.action_type === `offsite_conversion.custom.${id}`);
+  return a ? (parseFloat(a.value)||0) : 0;
+}
+// conversaciones de WhatsApp iniciadas (evento onsite de mensajería, cualquier ventana)
+function convStarted(actions){
+  if (!Array.isArray(actions)) return 0;
+  let s = 0;
+  actions.forEach(a => { if (typeof a.action_type==='string' && /messaging_conversation_started/i.test(a.action_type)) s += parseFloat(a.value)||0; });
+  return s;
+}
 
 /* ---------- Tipos de cambio (tasa del mes de cada dato) ---------- */
 const fxCache = {}; // "YYYY-MM" -> { cop, mxn }
@@ -129,6 +159,15 @@ function toReportRow(r, acc){
     'actions:link_click': esNum(linkClicks(r.actions)),
     results: { value: `${dep} (deposito)` },
     onsite_conversion_lead_grouped: 'Not available',
+    // --- pasos del funnel (números planos: el reporte los lee directo) ---
+    ev: {
+      landing:  landingViews(r.actions),
+      lead:     pixelCustom(r.actions, LEAD_EVENT),
+      conv:     convStarted(r.actions),
+      checkout: customConv(r.actions, acc.checkoutCC),
+      venta:    pixelCustom(r.actions, VENTA_EVENT),
+      anticipo: dep,
+    },
     date_start: r.date_start, date_stop: r.date_stop,
   };
 }
@@ -201,6 +240,17 @@ function toReportRow(r, acc){
       usd += parseFloat(r.amount_spent.replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(/,/g,'.'))||0;
     });
     console.log(`>>> VALIDACION ${c} semana ${lastFullWeek}: depositos=${dep} | gasto=$${usd.toFixed(0)} USD | CPD=$${dep?(usd/dep).toFixed(2):'-'}`);
+  }
+
+  // --- DIAGNÓSTICO: todos los eventos (action_types) vistos en la última semana completa ---
+  // Sirve para hallar el nombre exacto del Checkout y confirmar las conversaciones de WhatsApp.
+  for (const c of ['CO','MX']){
+    const tally = {};
+    weeklyRaw.filter(r => r.__acc.country===c && r.date_start===lastFullWeek).forEach(r => {
+      (r.actions||[]).forEach(a => { tally[a.action_type] = (tally[a.action_type]||0) + (parseFloat(a.value)||0); });
+    });
+    console.log(`>>> EVENTOS ${c} semana ${lastFullWeek} (action_type = total):`);
+    Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => console.log(`     ${k} = ${Math.round(v)}`));
   }
 
   // Previews de los anuncios con más gasto (últimas 6 semanas)
