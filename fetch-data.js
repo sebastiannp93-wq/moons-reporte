@@ -9,12 +9,12 @@
 const TOKEN = process.env.META_TOKEN;
 const API = 'https://graph.facebook.com/v21.0';
 const YEAR_START_MONDAY = '2025-12-29';
-const CHUNK_WEEKS = 4;
+const CHUNK_WEEKS = 2;   // bloques más chicos: el campo "conversions" agranda el payload
 const PREVIEW_MAX = 60;
 const ANTICIPO_CC = '828103137997978';   // conversión personalizada = evento Anticipo
 // --- Eventos del funnel (nombres del píxel personalizado) ---
-const LEAD_EVENT     = 'Lead-Server';    // evento de lead elegido (server-side, píxel personalizado)
-const VENTA_EVENT    = 'Venta';          // venta (bonus, píxel personalizado)
+const LEAD_EVENT     = 'Lead-Server';       // lead elegido (píxel personalizado; se lee del campo "conversions", que sí lo desglosa por nombre)
+const VENTA_CC       = '1026494197833441';  // "Sale(Venta)" como conversión personalizada (se lee de "actions")
 // "Checkout WebView" es una CONVERSIÓN PERSONALIZADA con id distinto por país (regla por URL):
 //   MX -> checkout.mymoons.mx (id 278309118394084) ; CO -> checkout.mymoons.co (id 1406103876985688)
 const ACCOUNTS = [
@@ -97,6 +97,13 @@ function customConv(actions, id){
   const a = actions.find(x => x.action_type === `offsite_conversion.custom.${id}`);
   return a ? (parseFloat(a.value)||0) : 0;
 }
+// evento personalizado del píxel LEÍDO DEL CAMPO "conversions" (ahí sí viene desglosado por nombre,
+// a diferencia de "actions", que los suma todos en offsite_conversion.fb_pixel_custom)
+function pixelCustomConv(conversions, name){
+  if (!Array.isArray(conversions) || !name) return 0;
+  const a = conversions.find(x => x.action_type === `offsite_conversion.fb_pixel_custom.${name}`);
+  return a ? (parseFloat(a.value)||0) : 0;
+}
 // conversaciones de WhatsApp iniciadas (evento onsite de mensajería, cualquier ventana)
 function convStarted(actions){
   if (!Array.isArray(actions)) return 0;
@@ -134,7 +141,7 @@ function toUSD(localSpend, month, currency){
   return (parseFloat(localSpend)||0) / rate;
 }
 
-const INSIGHT_FIELDS = 'ad_id,ad_name,adset_id,campaign_id,impressions,reach,spend,clicks,actions';
+const INSIGHT_FIELDS = 'ad_id,ad_name,adset_id,campaign_id,impressions,reach,spend,clicks,actions,conversions';
 
 async function fetchInsights(accId, timeIncrement, since, until){
   const raw = await graphAll(`act_${accId}/insights`, {
@@ -162,10 +169,10 @@ function toReportRow(r, acc){
     // --- pasos del funnel (números planos: el reporte los lee directo) ---
     ev: {
       landing:  landingViews(r.actions),
-      lead:     pixelCustom(r.actions, LEAD_EVENT),
+      lead:     pixelCustomConv(r.conversions, LEAD_EVENT),
       conv:     convStarted(r.actions),
       checkout: customConv(r.actions, acc.checkoutCC),
-      venta:    pixelCustom(r.actions, VENTA_EVENT),
+      venta:    customConv(r.actions, VENTA_CC),
       anticipo: dep,
     },
     date_start: r.date_start, date_stop: r.date_stop,
@@ -251,6 +258,15 @@ function toReportRow(r, acc){
     });
     console.log(`>>> EVENTOS ${c} semana ${lastFullWeek} (action_type = total):`);
     Object.entries(tally).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => console.log(`     ${k} = ${Math.round(v)}`));
+  }
+
+  // --- VALIDACIÓN DEL FUNNEL: suma de cada paso en la última semana completa ---
+  for (const c of ['CO','MX']){
+    let landing=0, lead=0, conv=0, chk=0, vta=0;
+    weekly.filter(r => r.country===c && r.date_start===lastFullWeek).forEach(r => {
+      landing+=r.ev.landing; lead+=r.ev.lead; conv+=r.ev.conv; chk+=r.ev.checkout; vta+=r.ev.venta;
+    });
+    console.log(`>>> FUNNEL ${c} semana ${lastFullWeek}: landing=${landing} | lead=${lead} | conversaciones=${conv} | checkout=${chk} | venta=${vta}`);
   }
 
   // Previews de los anuncios con más gasto (últimas 6 semanas)
