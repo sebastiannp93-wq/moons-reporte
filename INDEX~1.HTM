@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moons - Meta · Depósitos</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f5f7fa; --card:#ffffff; --border:#e3e7ee; --text:#1a2233; --muted:#6b7688;
+    --blue:#2f6fed; --blue-soft:#eaf1ff; --green:#1f9d55; --green-soft:#e8f8ee;
+    --red:#d64545; --red-soft:#fdecec; --amber:#b8860b; --amber-soft:#fff6e0;
+    --mx:#2f6fed; --co:#e0a015; --tot:#1a2233;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;}
+  #app{max-width:1180px;margin:0 auto;padding:20px 20px 60px;}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:18px;}
+  .header h1{font-size:22px;margin:0 0 4px;}
+  .header .sub{color:var(--muted);font-size:13px;}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;}
+  .filters label{font-size:12px;color:var(--muted);margin-right:6px;}
+  .filters select{font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text);max-width:230px;}
+  .badge-live{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--green);background:var(--green-soft);padding:3px 9px;border-radius:100px;font-weight:600;}
+  .badge-live .dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px;}
+  .card h2{font-size:15px;margin:0 0 4px;}
+  .card .desc{color:var(--muted);font-size:12px;margin:0 0 14px;}
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+  @media (max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi{border:1px solid var(--border);border-radius:12px;padding:14px;background:#fbfcfe;}
+  .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  .kpi .value{font-size:22px;font-weight:700;line-height:1.1;}
+  .kpi .delta{margin-top:6px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;}
+  .delta.up.good{color:var(--green);background:var(--green-soft);}
+  .delta.up.bad{color:var(--red);background:var(--red-soft);}
+  .delta.down.good{color:var(--green);background:var(--green-soft);}
+  .delta.down.bad{color:var(--red);background:var(--red-soft);}
+  .delta.flat{color:var(--muted);background:#eef0f4;}
+  .toggle-row{display:flex;gap:8px;margin-bottom:10px;}
+  .toggle-btn{font-size:12px;padding:5px 12px;border-radius:100px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
+  .toggle-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:900px){.chart-row{grid-template-columns:1fr;}}
+  .chart-box{height:260px;position:relative;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.02em;}
+  tbody tr:hover{background:#fafbfd;}
+  .tbl-wrap{overflow-x:auto;}
+  .pill{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+  .pill.mx{background:#eaf1ff;color:var(--mx);}
+  .pill.co{background:#fff3dc;color:#946600;}
+  .creative-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  @media (max-width:900px){.creative-grid{grid-template-columns:1fr;}}
+  .creative-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;}
+  .creative-card .thumb{width:100%;height:170px;object-fit:contain;background:#f2f4f8;display:block;}
+  .mock-ad{height:170px;background:#fff;border-bottom:1px solid var(--border);padding:12px;display:flex;flex-direction:column;overflow:hidden;}
+  .mock-ad .mh{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .mock-ad .avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+  .mock-ad .pg{font-size:12px;font-weight:600;}
+  .mock-ad .sp{font-size:10px;color:var(--muted);}
+  .mock-ad .mbody{font-size:11.5px;line-height:1.45;color:var(--text);overflow:hidden;flex:1;}
+  .mock-ad .mtags{display:flex;gap:6px;margin-top:8px;}
+  .mock-ad .mtag{font-size:10px;background:#eef2fa;color:#4a5a78;padding:2px 8px;border-radius:100px;}
+  .creative-card .body{padding:12px;}
+  .creative-card .name{font-size:12.5px;font-weight:600;margin-bottom:6px;word-break:break-word;}
+  .creative-card .metrics{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .chip{font-size:11px;background:#f2f4f8;padding:3px 8px;border-radius:100px;color:var(--text);}
+  .chip.good{background:var(--green-soft);color:var(--green);}
+  .chip.bad{background:var(--red-soft);color:var(--red);}
+  .creative-card a.preview{font-size:12px;color:var(--blue);text-decoration:none;font-weight:600;}
+  .section-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:900px){.section-grid2{grid-template-columns:1fr;}}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;}
+  .bar-row .lbl{width:130px;flex-shrink:0;color:var(--muted);}
+  .bar-track{flex:1;background:#eef0f4;border-radius:6px;height:10px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--blue);border-radius:6px;}
+  .bar-n{width:34px;text-align:right;color:var(--muted);flex-shrink:0;}
+  .alert-banner{border-radius:12px;padding:12px 16px;font-size:13px;margin-bottom:18px;border:1px solid;}
+  .alert-banner.warn{background:var(--amber-soft);border-color:#f0d999;color:#7a5c00;}
+  details.methodology summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--blue);}
+  details.methodology ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:12.5px;line-height:1.6;}
+  .loading-wrap{text-align:center;padding:80px 20px;color:var(--muted);}
+  .spinner{width:28px;height:28px;border-radius:50%;border:3px solid #dfe4ee;border-top-color:var(--blue);animation:spin 0.8s linear infinite;margin:0 auto 14px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .error-box{background:var(--red-soft);border:1px solid #f2c6c6;color:#8a1f1f;padding:16px;border-radius:12px;font-size:13px;}
+  .insight-list{margin:0;padding-left:18px;font-size:13px;line-height:1.7;}
+  .insight-list li{margin-bottom:4px;}
+  .small-note{font-size:11.5px;color:var(--muted);margin-top:8px;}
+  .country-compare-table td.mx{color:var(--mx);font-weight:600;}
+  .country-compare-table td.co{color:#946600;font-weight:600;}
+  .subfilter{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+  .subfilter label{font-size:12px;color:var(--muted);}
+  .subfilter select{font-size:12.5px;padding:5px 9px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text);max-width:320px;}
+  .cache-note{font-size:11px;color:var(--muted);}
+  .cache-note a{color:var(--blue);cursor:pointer;text-decoration:underline;}
+  .camp-chip{font-size:11.5px;padding:5px 10px;border-radius:100px;border:1px solid var(--border);background:#fff;cursor:pointer;color:var(--muted);}
+  .camp-chip.on{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .camp-chip.clear{border-color:#f2c6c6;color:var(--red);background:var(--red-soft);}
+  details.camp-acc{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:#fbfcfe;}
+  details.camp-acc[open]{background:#fff;}
+  details.camp-acc summary{cursor:pointer;padding:10px 12px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;list-style:none;}
+  details.camp-acc summary::-webkit-details-marker{display:none;}
+  details.camp-acc summary:before{content:'▸';color:var(--muted);}
+  details.camp-acc[open] summary:before{content:'▾';}
+  details.camp-acc.total{border-color:#c7dcff;}
+  details.camp-acc.total summary{background:var(--blue-soft);border-radius:10px;}
+  details.camp-acc .tbl-wrap{padding:0 12px 4px;}
+  details.camp-acc > .small-note{padding:0 12px 10px;margin-top:4px;}
+  .acc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;}
+  .dmini{font-size:10px;font-weight:700;margin-left:2px;}
+  .dmini.good{color:var(--green);}
+  .dmini.bad{color:var(--red);}
+  .dmini.flat{color:var(--muted);}
+  ol.next-steps li{margin-bottom:10px;}
+  .funnel-wrap{display:flex;gap:28px;flex-wrap:wrap;}
+  .funnel-col{flex:1;min-width:240px;}
+  .funnel-step{position:relative;background:#eef2fa;border-radius:8px;height:36px;display:flex;align-items:center;overflow:hidden;}
+  .funnel-bar{position:absolute;left:0;top:0;height:100%;background:var(--blue-soft);border-right:2px solid var(--blue);}
+  .funnel-lbl{position:relative;padding-left:12px;font-size:12px;font-weight:600;z-index:1;}
+  .funnel-n{position:relative;margin-left:auto;padding-right:12px;font-size:12px;z-index:1;}
+  .funnel-cr{font-size:10.5px;color:var(--muted);text-align:center;padding:2px 0;}
+</style>
+</head>
+<body>
+<script src="futura-data.js"></script>
+<div id="app">
+  <div id="loading" class="loading-wrap">
+    <div class="spinner"></div>
+    <div id="loadingMsg">Cargando datos del reporte…</div>
+  </div>
+  <div id="errorBox" style="display:none" class="error-box"></div>
+  <div id="content" style="display:none"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const ACCOUNTS = {CO:'285086213215776', MX:'633488553830053'};
+const AD_ACCOUNT_ID = ACCOUNTS.MX; // solo referencia; el reporte es snapshot-only
+const FX_FACTOR = 1; // el robot ya entrega el gasto en USD (conversión histórica por mes vía API de divisas)
+const ADS_TOOL = 'mcp__7dfd37e6-2802-4eda-8450-6d6b32b1eb29__ads_get_ad_entities';
+const CREATIVES_TOOL = 'mcp__7dfd37e6-2802-4eda-8450-6d6b32b1eb29__ads_get_creatives';
+const PREVIEW_TOOL = 'mcp__7dfd37e6-2802-4eda-8450-6d6b32b1eb29__ads_get_ad_preview';
+// MODO DUAL:
+//  - "live": dentro de Cowork (window.cowork existe) -> datos en vivo vía conector Meta.
+//  - "snapshot": abierto directamente en el navegador -> usa futura-data.js (snapshot regenerable)
+//    y en el navegador las imágenes de los anuncios SÍ cargan (sin sandbox).
+const LIVE_MODE = false; // Moons: los datos vienen del robot (snapshot de 2 cuentas); no hay fetch en vivo
+const SNAPSHOT = (typeof window!=='undefined' && window.__FUTURA_SNAPSHOT__) || null;
+const CACHE_WEEKS = 'moons_weeks_v1';
+const CACHE_MONTHS = 'moons_months_v1';
+const CACHE_CAMPS = 'moons_camps_v1';
+const SETTLE_DAYS = 10; // una semana/mes se considera "cerrado" si terminó hace >10 días (buffer de atribución 7d)
+
+const ANGLE_MAP = [
+  [/ugc/i, 'UGC'],
+  [/testimoni/i, 'Testimonial'],
+  [/close_?up|closeup/i, 'Close-up'],
+  [/(^|_)vs(_|$)|versus|vsmoos/i, 'Comparativa (VS)'],
+  [/ugly/i, 'Ugly ad'],
+  [/antes|be-?af|before|after|despues/i, 'Antes/Después'],
+  [/educativo|info/i, 'Educativo/Informativo'],
+  [/hotsale|hot_?sale/i, 'Hot Sale'],
+  [/aniversario/i, 'Aniversario'],
+  [/navidad/i, 'Navidad'],
+  [/(^|_)rmk|rmkt|remarketing/i, 'Remarketing'],
+  [/lifestyle/i, 'Lifestyle'],
+  [/producto/i, 'Producto'],
+  [/texto/i, 'Texto'],
+  [/promo|descuento|oferta/i, 'Promoción'],
+  [/dra_ia|_ia_|_ia$|(^|_)ia(_|$)/i, 'IA'],
+  [/brand|marca/i, 'Marca'],
+  [/prospection|avantage|advantage|broad|(^|_)lal(_|$)|winners/i, 'Prospección/Broad'],
+];
+function classifyAngle(name){ for(const [re,label] of ANGLE_MAP){ if(re.test(name)) return label; } return 'Sin clasificar'; }
+function classifyFormat(name){
+  const n = name.toLowerCase();
+  if(/(^|_)vid(_|$)/.test(n)) return 'Video';
+  if(/(^|_)img(_|$)/.test(n)) return 'Imagen';
+  return 'Otro/Sin dato';
+}
+function classifyCountry(name){
+  const n = name.toLowerCase();
+  if(n.startsWith('mx_')) return 'MX';
+  if(n.startsWith('co_')) return 'CO';
+  return null;
+}
+// Flujo de la campaña/anuncio: WhatsApp (CTWA) o Web, según el nombre.
+function classifyPath(name){ return /ctwa|whats?app|(^|_)wa(_|$)/i.test(name||'') ? 'wa' : 'web'; }
+// Campana de mensajes = su nombre contiene "ctwa" (regla del cliente: ctwa=WhatsApp, resto=web). Aplica a historico y futuras.
+function isMsgCampaign(cid){
+  const name = (typeof RAW!=='undefined' && RAW.campaigns) ? (RAW.campaigns.get(String(cid))||'') : '';
+  return /ctwa/i.test(name);
+}
+
+/* ============================================================
+   PARSING (auditado contra Ads Manager — ver metodología)
+   ============================================================ */
+function parseNum(v){
+  if(v===null||v===undefined) return null;
+  if(typeof v==='number') return v;
+  if(typeof v!=='string') return null;
+  if(v.trim()==='' || /no disponible|not available/i.test(v)) return null;
+  let s = v.replace(/ /g,' ').trim();
+  s = s.replace(/[^\d,.\-]/g,'');
+  if(s==='') return null;
+  s = s.replace(/\./g,'').replace(/,/g,'.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+/*
+ REGLA MQL (validada contra plataforma, semana 15-21 jun 2026):
+ - results texto "N (QualifiedLead)" -> MQL = N.
+ - results array (grupos de objetivo mixto): el indicador "custom_event_actions_add_meta_leads"
+   trae QualifiedLead + clientes potenciales de Meta SUMADOS.
+   MQL puro = combinado - onsite_conversion_lead_grouped. (28-26=2 = Ads Manager ✓; adset 71-67=4 ✓)
+ - otra etiqueta (Leads, Presentación agendada...) -> excluido del programa MQL por completo.
+*/
+function parseResultField(field, onsiteLeadsRaw){
+  if(!field || field.value===undefined) return {mql:null,dataIssue:true,isQualified:false,mixed:false};
+  const v = field.value;
+  if(typeof v === 'string'){
+    if(/not available|no disponible/i.test(v)) return {mql:null,dataIssue:true,isQualified:false,mixed:false};
+    const m = v.match(/^([\-\d.,]+)\s*\((.+)\)\s*$/);
+    if(m){
+      const num = parseNum(m[1]);
+      const isQ = /deposito|anticipo|qualif/i.test(m[2]);
+      return {mql: isQ ? (num||0) : 0, dataIssue:false, isQualified:isQ, mixed:false};
+    }
+    return {mql:null,dataIssue:true,isQualified:false,mixed:false};
+  }
+  if(Array.isArray(v)){
+    let combined=null;
+    for(const entry of v){
+      if(entry.indicator && /deposito|anticipo|qualifiedlead/i.test(entry.indicator)){
+        let val = 0;
+        if(entry.values && entry.values[0] && entry.values[0].value!==undefined){
+          const raw = entry.values[0].value;
+          val = typeof raw==='number' ? raw : (parseNum(raw)||0);
+        }
+        combined = (combined||0) + val;
+      }
+    }
+    if(combined!==null){
+      const onsite = parseNum(onsiteLeadsRaw) || 0;
+      return {mql: Math.max(0, combined - onsite), dataIssue:false, isQualified:true, mixed:true};
+    }
+    return {mql:0, dataIssue:false, isQualified:false, mixed:false};
+  }
+  return {mql:null,dataIssue:true,isQualified:false,mixed:false};
+}
+function toDateUTC(s){ const [y,m,d]=s.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)); }
+function fmtDate(d){ const y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,'0'),day=String(d.getUTCDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function mondayOf(dateObj){ const d=new Date(dateObj); const day=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-day); d.setUTCHours(0,0,0,0); return d; }
+const MESES_CORTOS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MESES_LARGOS = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,octubre:10,noviembre:11,diciembre:12};
+function convertMetaDate(s){
+  if(!s) return null;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/(\d{1,2}) de ([a-záéíóú]+) de (\d{4})/i);
+  if(!m) return null;
+  const mon = MESES_LARGOS[m[2].toLowerCase()];
+  if(!mon) return null;
+  return `${m[3]}-${String(mon).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+}
+function labelWeek(d){ return `${d.getUTCDate()} ${MESES_CORTOS[d.getUTCMonth()]}`; }
+function labelWeekFull(d){ const end=new Date(d); end.setUTCDate(end.getUTCDate()+6); return `${d.getUTCDate()} ${MESES_CORTOS[d.getUTCMonth()]} – ${end.getUTCDate()} ${MESES_CORTOS[end.getUTCMonth()]}`; }
+function labelMonth(d){ return `${MESES_CORTOS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; }
+function fmtUSD(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return '$'+n.toLocaleString('en-US',{maximumFractionDigits:0}); }
+function fmtUSD2(n){ if(n===null||n===undefined||isNaN(n)) return '—'; return '$'+n.toLocaleString('en-US',{maximumFractionDigits:2}); }
+function fmtNum(n,d=0){ if(n===null||n===undefined||isNaN(n)) return '—'; return n.toLocaleString('en-US',{maximumFractionDigits:d}); }
+function pctOrDash(ratio,d=1){ if(ratio===null||ratio===undefined||isNaN(ratio)) return '—'; return (ratio*100).toLocaleString('en-US',{maximumFractionDigits:d})+'%'; }
+function safeDiv(a,b){ return (b===0||b===null||b===undefined||a===null||a===undefined) ? null : a/b; }
+function lsGet(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+/* ============================================================
+   MCP WRAPPERS (con reintentos ante errores temporales de Meta)
+   ============================================================ */
+function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+async function callToolFull(name,args,retries=3){
+  let lastErr=null;
+  for(let attempt=0; attempt<=retries; attempt++){
+    if(attempt>0) await sleep(attempt*2500);
+    try{
+      const r = await window.cowork.callMcpTool(name,args);
+      if(!r.isError) return r;
+      const errTxt = JSON.stringify(r.content).slice(0,300);
+      lastErr = new Error('Error llamando '+name+': '+errTxt);
+      if(!/internal server error|#2\b|unknown error|try again|rate limit|timeout|temporarily/i.test(errTxt)) throw lastErr;
+    }catch(e){
+      lastErr = e;
+      if(!/internal server error|#2\b|unknown error|try again|rate limit|timeout|temporarily|network|fetch/i.test(String(e.message||e))) throw e;
+    }
+  }
+  throw lastErr;
+}
+async function callTool(name,args){
+  const r = await callToolFull(name,args);
+  return r.structuredContent ?? JSON.parse(r.content[0].text);
+}
+async function fetchEntities(args){
+  const outer = await callTool(ADS_TOOL, args);
+  let rows = outer.ad_entities;
+  if(typeof rows === 'string') rows = JSON.parse(rows);
+  return {rows: rows||[], total: outer.summary ? outer.summary.total_count : (rows?rows.length:0)};
+}
+
+/* ============================================================
+   FECHAS BASE
+   ============================================================ */
+const today = new Date();
+const todayUTC = new Date(Date.UTC(today.getFullYear(),today.getMonth(),today.getDate()));
+const yearStartMonday = mondayOf(toDateUTC('2026-01-01'));
+const currentWeekMonday = mondayOf(todayUTC);
+const settleCutoff = new Date(todayUTC); settleCutoff.setUTCDate(settleCutoff.getUTCDate()-SETTLE_DAYS);
+
+function allMondays(){
+  const out=[]; let d=new Date(yearStartMonday);
+  while(d<=currentWeekMonday){ out.push(new Date(d)); d=new Date(d); d.setUTCDate(d.getUTCDate()+7); }
+  return out;
+}
+function weekIsSettled(monday){ const end=new Date(monday); end.setUTCDate(end.getUTCDate()+6); return end < settleCutoff; }
+
+/* ============================================================
+   CARGA DE DATOS con caché local
+   - Semanas "cerradas" (terminaron hace >10 días) se guardan en localStorage
+     y no se vuelven a pedir -> cargas siguientes casi instantáneas.
+   - Solo se piden a Meta las semanas recientes (la atribución aún puede moverse).
+   ============================================================ */
+let RAW = { weekly:[], monthly:null, campaigns:new Map(), truncationWarnings:[], usedCache:false };
+const AD_FIELDS = ['id','name','adset_id','campaign_id','creative_id','impressions','reach','amount_spent','clicks','actions:link_click','results','onsite_conversion_lead_grouped'];
+const nameFilterAd = {field:'ad.name', operator:'CONTAINS_ANY', value:['mx_','co_']};
+const impFilterAd = {field:'ad.impressions', operator:'GREATER_THAN', value:['0']};
+
+function seedData(){ return (typeof window!=='undefined' && window.__FUTURA_SEED__) || null; }
+async function loadCampaigns(){
+  if(!LIVE_MODE){
+    if(SNAPSHOT && SNAPSHOT.campaigns) Object.entries(SNAPSHOT.campaigns).forEach(([id,name])=> RAW.campaigns.set(id,name));
+    return;
+  }
+  // semilla incrustada: nombres disponibles al instante, sin llamada a Meta
+  const seed = seedData();
+  if(seed && seed.campaigns) Object.entries(seed.campaigns).forEach(([id,name])=>{ if(!RAW.campaigns.has(id)) RAW.campaigns.set(id,name); });
+  const cached = lsGet(CACHE_CAMPS);
+  if(cached && cached.ts && (Date.now()-cached.ts) < 24*3600e3 && cached.data){
+    Object.entries(cached.data).forEach(([id,name])=> RAW.campaigns.set(id,name));
+    return;
+  }
+  try{
+    const camps = await fetchEntities({ad_account_id:AD_ACCOUNT_ID, level:'campaign', fields:['id','name'], limit:500});
+    const obj={};
+    camps.rows.forEach(c=>{ RAW.campaigns.set(String(c.id), c.name); obj[String(c.id)]=c.name; });
+    lsSet(CACHE_CAMPS, {ts:Date.now(), data:obj});
+  }catch(e){
+    if(RAW.campaigns.size===0) throw e; // con semilla no es fatal
+  }
+}
+
+async function loadWeekly(){
+  if(!LIVE_MODE){
+    if(SNAPSHOT && SNAPSHOT.weekly) RAW.weekly = SNAPSHOT.weekly;
+    else RAW.truncationWarnings.push('Este archivo se abrió fuera de Cowork y no se encontró futura-data.js junto a él. Copia ambos archivos a la misma carpeta.');
+    return;
+  }
+  const msg = document.getElementById('loadingMsg');
+  const cache = lsGet(CACHE_WEEKS) || {};
+  // sembrar el caché con las semanas cerradas incrustadas en el archivo (inmutables):
+  const seed = seedData();
+  if(seed && seed.weekly){
+    const byWeek = {};
+    seed.weekly.forEach(r=>{ const d=convertMetaDate(r.date_start); if(d) (byWeek[d]=byWeek[d]||[]).push(r); });
+    Object.entries(byWeek).forEach(([k,rows])=>{ if(weekIsSettled(toDateUTC(k)) && !cache[k]) cache[k]=rows; });
+  }
+  const mondays = allMondays();
+  const missing = mondays.filter(m=> !(weekIsSettled(m) && cache[fmtDate(m)]));
+  // semanas cerradas ya en caché:
+  let cachedCount=0;
+  mondays.forEach(m=>{
+    const k=fmtDate(m);
+    if(weekIsSettled(m) && cache[k]){ RAW.weekly.push(...cache[k]); cachedCount++; }
+  });
+  if(cachedCount>0) RAW.usedCache=true;
+  if(missing.length===0) return;
+  // agrupar semanas faltantes contiguas en rangos, máx 8 semanas por consulta
+  const ranges=[];
+  let start=missing[0], prev=missing[0], count=1;
+  for(let i=1;i<=missing.length;i++){
+    const cur=missing[i];
+    const contiguous = cur && (cur.getTime()-prev.getTime())===7*86400e3 && count<8;
+    if(contiguous){ prev=cur; count++; }
+    else{
+      const end=new Date(prev); end.setUTCDate(end.getUTCDate()+6);
+      ranges.push({since:fmtDate(start), until: fmtDate(end<todayUTC?end:todayUTC)});
+      if(cur){ start=cur; prev=cur; count=1; }
+    }
+  }
+  for(let i=0;i<ranges.length;i++){
+    msg.textContent = ranges.length>1 ? `Cargando datos de Meta… (bloque ${i+1} de ${ranges.length})` : 'Cargando semanas recientes desde Meta…';
+    try{
+      const res = await fetchEntities({
+        ad_account_id: AD_ACCOUNT_ID, level:'ad', fields: AD_FIELDS,
+        filtering:[nameFilterAd, impFilterAd],
+        time_range: JSON.stringify(ranges[i]), time_increment:'7', limit: 1000
+      });
+      RAW.weekly.push(...res.rows);
+      if(res.total>=1000) RAW.truncationWarnings.push('Posible truncamiento en el rango '+ranges[i].since+' → '+ranges[i].until+'.');
+      // guardar en caché las semanas cerradas de este rango
+      const byWeek={};
+      res.rows.forEach(r=>{
+        const dstr = convertMetaDate(r.date_start);
+        if(!dstr) return;
+        (byWeek[dstr]=byWeek[dstr]||[]).push(r);
+      });
+      Object.entries(byWeek).forEach(([k,rows])=>{
+        if(weekIsSettled(toDateUTC(k))) cache[k]=rows;
+      });
+    }catch(e){
+      RAW.truncationWarnings.push('⚠️ Meta no respondió para el rango '+ranges[i].since+' → '+ranges[i].until+' tras varios reintentos. Recarga el reporte para reintentar.');
+    }
+  }
+  lsSet(CACHE_WEEKS, cache);
+}
+
+let monthlyLoadPromise=null;
+async function loadMonthlyLazy(){
+  if(RAW.monthly!==null) return;
+  if(!LIVE_MODE){
+    RAW.monthly = (SNAPSHOT && SNAPSHOT.monthly) || [];
+    MONTHLY = RAW.monthly.map(normRow).filter(Boolean);
+    return;
+  }
+  if(monthlyLoadPromise) return monthlyLoadPromise;
+  monthlyLoadPromise = (async ()=>{
+    // meses cerrados desde la semilla incrustada; a Meta solo se le piden los meses abiertos
+    const seed = seedData();
+    let settledRows=[], since='2026-01-01';
+    if(seed && seed.monthly && seed.monthly.length){
+      const monthEnd = (ym)=>{ const d=toDateUTC(ym+'-01'); d.setUTCMonth(d.getUTCMonth()+1); d.setUTCDate(0); return d; };
+      seed.monthly.forEach(r=>{
+        const d=convertMetaDate(r.date_start);
+        if(d && monthEnd(d.slice(0,7)) < settleCutoff) settledRows.push(r);
+      });
+      const months=[]; let m=toDateUTC('2026-01-01');
+      while(m<=todayUTC){ months.push(fmtDate(m).slice(0,7)); m=new Date(m); m.setUTCMonth(m.getUTCMonth()+1); }
+      const firstOpen = months.find(ym=> !(monthEnd(ym) < settleCutoff));
+      if(firstOpen) since = firstOpen+'-01';
+    }
+    try{
+      const mo = await fetchEntities({
+        ad_account_id: AD_ACCOUNT_ID, level:'ad', fields: AD_FIELDS,
+        filtering:[nameFilterAd, impFilterAd],
+        time_range: JSON.stringify({since, until: fmtDate(todayUTC)}),
+        time_increment:'monthly', limit: 1000
+      });
+      RAW.monthly = settledRows.concat(mo.rows);
+    }catch(e){
+      RAW.monthly = settledRows; // al menos los meses cerrados
+    }
+    MONTHLY = RAW.monthly.map(normRow).filter(Boolean);
+  })();
+  return monthlyLoadPromise;
+}
+
+/* ============================================================
+   NORMALIZACIÓN
+   ============================================================ */
+function normRow(row){
+  const country = row.country || classifyCountry(row.name);
+  if(!country) return null;
+  const res = parseResultField(row.results, row.onsite_conversion_lead_grouped);
+  const spendMXN = parseNum(row.amount_spent);
+  const impressions = parseNum(row.impressions) || 0;
+  const reach = parseNum(row.reach) || 0;
+  const clicksAll = parseNum(row.clicks) || 0;
+  const linkClicks = parseNum(row['actions:link_click']) || 0;
+  const dstr = convertMetaDate(row.date_start);
+  const ev = row.ev || {};
+  return {
+    id: row.id, name: row.name, country, path: classifyPath(RAW.campaigns.get(String(row.campaign_id||'')) || row.name),
+    isQualified: res.isQualified, dataIssue: res.dataIssue, mixed: res.mixed,
+    mql: res.isQualified ? (res.mql||0) : 0,
+    landing:+ev.landing||0, lead:+ev.lead||0, conv:+ev.conv||0, checkout:+ev.checkout||0, venta:+ev.venta||0,
+    spendUSD: (res.isQualified && spendMXN!==null) ? spendMXN*FX_FACTOR : null,
+    spendUSD_raw: spendMXN!==null ? spendMXN*FX_FACTOR : null,
+    impressions, reach, clicksAll, linkClicks,
+    campaignId: String(row.campaign_id||''), adsetId: row.adset_id, creativeId: row.creative_id,
+    periodKey: dstr, weekStart: dstr ? mondayOf(toDateUTC(dstr)) : null,
+    excluded: !res.isQualified && !res.dataIssue
+  };
+}
+
+let WEEKLY=[], MONTHLY=[], WEEKS_LIST=[], PLACEMENTS=[];
+function buildDatasets(){
+  WEEKLY = RAW.weekly.map(normRow).filter(Boolean);
+  const wk = new Map();
+  WEEKLY.forEach(r=>{ if(r.weekStart) wk.set(r.weekStart.getTime(), r.weekStart); });
+  WEEKS_LIST = Array.from(wk.values()).sort((a,b)=>a-b);
+  PLACEMENTS = (SNAPSHOT && SNAPSHOT.placements) || [];
+}
+// campañas disponibles según país seleccionado.
+// El país de una campaña se determina por el prefijo del NOMBRE DE LA CAMPAÑA (mx_/co_),
+// no por los anuncios que contiene (un anuncio mx_ puede vivir en una campaña co_ por error de armado).
+function campaignsForCountry(country){
+  const cs = new Map();
+  WEEKLY.forEach(r=>{
+    if(r.excluded || !r.campaignId) return;
+    const cname = RAW.campaigns.get(r.campaignId) || ('Campaña '+r.campaignId);
+    const cCountry = classifyCountry(cname); // país según nombre de la campaña
+    if(country!=='ALL'){
+      if(cCountry ? (cCountry!==country) : (r.country!==country)) return;
+    }
+    cs.set(r.campaignId, cname);
+  });
+  return Array.from(cs.entries()).map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+/* ============================================================
+   AGREGACIÓN
+   ============================================================ */
+function aggregate(rows, filterFn){
+  const f = rows.filter(filterFn);
+  let spend=0, mql=0, impressions=0, reach=0, linkClicks=0, clicksAll=0, excludedSpend=0, any=false;
+  let landing=0, lead=0, conv=0, checkout=0, venta=0;
+  f.forEach(r=>{
+    if(r.excluded){ excludedSpend += (r.spendUSD_raw||0); return; }
+    if(r.dataIssue) return;
+    any=true;
+    spend += (r.spendUSD||0);
+    mql += (r.mql||0);
+    impressions += r.impressions;
+    reach += r.reach;
+    linkClicks += r.linkClicks;
+    clicksAll += r.clicksAll;
+    landing += (r.landing||0); lead += (r.lead||0); conv += (r.conv||0); checkout += (r.checkout||0); venta += (r.venta||0);
+  });
+  return {
+    spend: any?spend:null, mql: any?mql:null, impressions, reach, linkClicks, clicksAll, excludedSpend, any,
+    landing, lead, conv, checkout, venta,
+    cpmql: safeDiv(spend, mql),
+    cr: safeDiv(mql, linkClicks),
+    frequency: safeDiv(impressions, reach),
+    ftir: safeDiv(reach, impressions),
+    ctrLink: safeDiv(linkClicks, impressions),
+    cpc: safeDiv(spend, clicksAll),
+    cpm: impressions>0 ? spend/(impressions/1000) : null,
+    cpl: safeDiv(spend, lead),
+    costConv: safeDiv(spend, conv),
+    costCheckout: safeDiv(spend, checkout),
+    costVenta: safeDiv(spend, venta),
+    crClicLead: safeDiv(lead, linkClicks),
+    crLandingLead: safeDiv(lead, landing),
+    crLeadCheckout: safeDiv(checkout, lead),
+    crCheckoutAnticipo: safeDiv(mql, checkout),
+    crLeadAnticipo: safeDiv(mql, lead),
+    crClicConv: safeDiv(conv, linkClicks),
+    crConvAnticipo: safeDiv(mql, conv),
+    crClicAnticipo: safeDiv(mql, linkClicks),
+    crAnticipoVenta: safeDiv(venta, mql)
+  };
+}
+function countryFilterFn(c){ return (r)=> c==='ALL' ? true : r.country===c; }
+function weekFilterFn(t){ return (r)=> r.weekStart && r.weekStart.getTime()===t; }
+function campaignFilterFn(c){ return (r)=> c==='ALL' ? true : r.campaignId===c; }
+
+/* ============================================================
+   ESTADO
+   ============================================================ */
+let STATE = { country:'ALL', weekIdx:-1, trendMode:'week', trendMetric:'anticipo', trendMetric2:'', trendCampaign:'ALL', tableCampaigns:[], placementCampaign:'ALL' };
+function selectedWeek(){ return WEEKS_LIST[STATE.weekIdx<0 ? WEEKS_LIST.length-1 : STATE.weekIdx]; }
+function pctDelta(cur, prev){
+  if(cur===null||prev===null||prev===0||prev===undefined||cur===undefined) return null;
+  return ((cur-prev)/Math.abs(prev))*100;
+}
+function deltaBadge(pct, invert){
+  if(pct===null) return `<span class="delta flat">— sin dato previo</span>`;
+  const up = pct>=0;
+  const good = invert ? !up : up;
+  const cls = (up?'up':'down')+' '+(good?'good':'bad');
+  return `<span class="delta ${cls}">${up?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+}
+
+/* ============================================================
+   KPI RESUMEN
+   ============================================================ */
+function renderSummary(){
+  const wk = selectedWeek();
+  const idx = WEEKS_LIST.indexOf(wk);
+  const wkPrev = WEEKS_LIST[idx-1];
+  const cur = aggregate(WEEKLY, r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r));
+  const prev = wkPrev ? aggregate(WEEKLY, r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wkPrev.getTime())(r)) : null;
+  const isPartial = wk.getTime()===currentWeekMonday.getTime();
+  const kpis = [
+    {label:'Gasto', val: fmtUSD(cur.spend), prev: prev?prev.spend:null, cur:cur.spend, invert:false},
+    {label:'Depósitos', val: fmtNum(cur.mql), prev: prev?prev.mql:null, cur:cur.mql, invert:false},
+    {label:'CPD', val: fmtUSD2(cur.cpmql), prev: prev?prev.cpmql:null, cur:cur.cpmql, invert:true},
+    {label:'CR (Dep./Clic enlace)', val: pctOrDash(cur.cr,2), prev: prev?prev.cr:null, cur:cur.cr, invert:false},
+    {label:'Frecuencia', val: fmtNum(cur.frequency,2), prev: prev?prev.frequency:null, cur:cur.frequency, invert:true},
+  ];
+  let html = `<div class="card">
+    <h2>Resumen — semana del ${labelWeekFull(wk)}${isPartial?' <span style="color:var(--amber);font-weight:600;font-size:11px;">(en curso)</span>':''}</h2>
+    <p class="desc">Variación % vs. semana anterior (${wkPrev?labelWeekFull(wkPrev):'sin dato previo'}). País: ${STATE.country==='ALL'?'Todos':STATE.country}. Cifras en USD.</p>
+    <div class="kpi-grid">`;
+  kpis.forEach(k=>{ html += `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.val}</div>${deltaBadge(pctDelta(k.cur,k.prev),k.invert)}</div>`; });
+  html += `</div>`;
+  if(cur.excludedSpend>1){
+    html += `<div class="small-note">Se excluyeron ${fmtUSD(cur.excludedSpend)} de gasto de anuncios sin dato de depósito.</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+/* ============================================================
+   GRÁFICOS DE TENDENCIA
+   ============================================================ */
+let chartTrend=null;
+const TREND_METRICS = [
+  {key:'impressions', label:'Impresiones', grp:'Volumen', calc:o=>o.t.impressions, kind:'num'},
+  {key:'linkClicks', label:'Clics (enlace)', grp:'Volumen', calc:o=>o.t.linkClicks, kind:'num'},
+  {key:'landing', label:'Vistas de página', grp:'Volumen', calc:o=>o.web.landing, kind:'num'},
+  {key:'lead', label:'Leads', grp:'Volumen', calc:o=>o.web.lead, kind:'num'},
+  {key:'conv', label:'Conversaciones (WhatsApp)', grp:'Volumen', calc:o=>o.msg.conv, kind:'num'},
+  {key:'checkout', label:'Checkout', grp:'Volumen', calc:o=>o.t.checkout, kind:'num'},
+  {key:'anticipo', label:'Anticipos (dep\u00f3sito)', grp:'Volumen', calc:o=>o.t.anticipo, kind:'num'},
+  {key:'cpm', label:'CPM', grp:'Costo (USD)', calc:o=> o.t.impressions>0? o.t.spend/(o.t.impressions/1000):null, kind:'usd'},
+  {key:'cpc', label:'CPC', grp:'Costo (USD)', calc:o=> safeDiv(o.t.spend,o.t.linkClicks), kind:'usd'},
+  {key:'cpl', label:'CPL (costo/lead)', grp:'Costo (USD)', calc:o=> safeDiv(o.web.spend,o.web.lead), kind:'usd'},
+  {key:'costConv', label:'Costo/conversaci\u00f3n', grp:'Costo (USD)', calc:o=> safeDiv(o.msg.spend,o.msg.conv), kind:'usd'},
+  {key:'costCheckout', label:'Costo/checkout', grp:'Costo (USD)', calc:o=> safeDiv(o.t.spend,o.t.checkout), kind:'usd'},
+  {key:'cpd', label:'CPD (costo/dep\u00f3sito)', grp:'Costo (USD)', calc:o=> safeDiv(o.t.spend,o.t.anticipo), kind:'usd'},
+  {key:'crClicLead', label:'CR Clic\u2192Lead', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.web.lead,o.web.linkClicks), kind:'pct'},
+  {key:'crLandingLead', label:'CR P\u00e1gina\u2192Lead', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.web.lead,o.web.landing), kind:'pct'},
+  {key:'crLeadCheckout', label:'CR Lead\u2192Checkout', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.web.checkout,o.web.lead), kind:'pct'},
+  {key:'crCheckoutAnticipo', label:'CR Checkout\u2192Dep\u00f3sito', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.t.anticipo,o.t.checkout), kind:'pct'},
+  {key:'crLeadAnticipo', label:'CR Lead\u2192Dep\u00f3sito', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.web.anticipo,o.web.lead), kind:'pct'},
+  {key:'crClicConv', label:'CR Clic\u2192Conversaci\u00f3n', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.msg.conv,o.msg.linkClicks), kind:'pct'},
+  {key:'crConvAnticipo', label:'CR Conversaci\u00f3n\u2192Dep\u00f3sito', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.msg.anticipo,o.msg.conv), kind:'pct'},
+  {key:'crClicAnticipo', label:'CR Clic\u2192Dep\u00f3sito', grp:'Conversi\u00f3n (%)', calc:o=> safeDiv(o.t.anticipo,o.t.linkClicks), kind:'pct'},
+];
+function trendMetricDef(){ return TREND_METRICS.find(m=>m.key===STATE.trendMetric) || TREND_METRICS[6]; }
+function buildTrendSeries(dataset, useWeek){
+  const blank = ()=>({spend:0,impressions:0,linkClicks:0,landing:0,lead:0,conv:0,checkout:0,anticipo:0});
+  const scope = ()=>({t:blank(),web:blank(),msg:blank()});
+  const buckets = new Map();
+  dataset.forEach(r=>{
+    if(!r.periodKey || r.excluded || r.dataIssue) return;
+    if(STATE.trendCampaign!=='ALL' && r.campaignId!==STATE.trendCampaign) return;
+    const key = useWeek ? r.periodKey : r.periodKey.slice(0,7);
+    if(!buckets.has(key)) buckets.set(key,{ALL:scope(),MX:scope(),CO:scope(), d: toDateUTC(useWeek?r.periodKey:(key+'-01'))});
+    const b = buckets.get(key);
+    const flow = isMsgCampaign(r.campaignId) ? 'msg' : 'web';
+    const addTo = (o)=>{ o.spend+=(r.spendUSD||0); o.impressions+=r.impressions; o.linkClicks+=r.linkClicks; o.landing+=(r.landing||0); o.lead+=(r.lead||0); o.conv+=(r.conv||0); o.checkout+=(r.checkout||0); o.anticipo+=(r.mql||0); };
+    const addScope = (sc)=>{ addTo(sc.t); addTo(sc[flow]); };
+    addScope(b.ALL); if(b[r.country]) addScope(b[r.country]);
+  });
+  return Array.from(buckets.keys()).sort().map(k=>({key:k, ...buckets.get(k)}));
+}
+function renderTrends(){
+  const groups = [...new Set(TREND_METRICS.map(m=>m.grp))];
+  const optList = (sel, none)=> (none?`<option value="">— ninguna —</option>`:'') + groups.map(g=> `<optgroup label="${g}">`+TREND_METRICS.filter(m=>m.grp===g).map(m=>`<option value="${m.key}" ${sel===m.key?'selected':''}>${m.label}</option>`).join('')+`</optgroup>`).join('');
+  const tcamps = campaignsForCountry(STATE.country);
+  if(STATE.trendCampaign!=='ALL' && !tcamps.some(c=>c.id===STATE.trendCampaign)) STATE.trendCampaign='ALL';
+  const campOpts = `<option value="ALL">Todas las campañas</option>` + tcamps.map(c=>`<option value="${c.id}" ${STATE.trendCampaign===c.id?'selected':''}>${c.name}</option>`).join('');
+  return `<div class="card">
+    <h2>Tendencia del funnel — 2026</h2>
+    <p class="desc">Elige una métrica (o dos, para comparar) y, si quieres, una campaña puntual. El filtro de país aplica; el de semana no. Cifras en USD.</p>
+    <div class="subfilter">
+      <label>Métrica</label>
+      <select id="trendMetricSel">${optList(STATE.trendMetric,false)}</select>
+      <label>Comparar con</label>
+      <select id="trendMetric2Sel">${optList(STATE.trendMetric2,true)}</select>
+      <label>Campaña</label>
+      <select id="trendCampSel">${campOpts}</select>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn ${STATE.trendMode==='week'?'active':''}" data-trend="week">Semana</button>
+      <button class="toggle-btn ${STATE.trendMode==='month'?'active':''}" data-trend="month">Mes</button>
+    </div>
+    <div id="trendLoading" class="small-note" style="display:none;">Cargando vista mensual…</div>
+    <div><div id="trendTitle" style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;"></div><div class="chart-box"><canvas id="chartTrend"></canvas></div></div>
+    <div class="small-note" id="trendNote"></div>
+  </div>`;
+}
+async function drawCharts(){
+  const useWeek = STATE.trendMode==='week';
+  if(!useWeek && RAW.monthly===null){
+    const tl=document.getElementById('trendLoading'); if(tl) tl.style.display='block';
+    await loadMonthlyLazy();
+    if(tl) tl.style.display='none';
+  }
+  const series = buildTrendSeries(useWeek ? WEEKLY : MONTHLY, useWeek);
+  const labels = series.map(s=> useWeek ? labelWeek(s.d) : labelMonth(s.d));
+  const scope = STATE.country==='ALL' ? 'ALL' : STATE.country;
+  const m1 = trendMetricDef();
+  const m2 = STATE.trendMetric2 ? (TREND_METRICS.find(m=>m.key===STATE.trendMetric2) || null) : null;
+  const valOf = (md,o)=>{ const v=md.calc(o); if(v===null||v===undefined||isNaN(v)) return null; return md.kind==='pct'? +(v*100).toFixed(2) : (md.kind==='usd'? +v.toFixed(2) : v); };
+  const axCb = (kind)=> (v)=> kind==='pct'? v+'%' : (kind==='usd'? '$'+v : v);
+  const mk = (label,data,color,dash,w,yid)=>({label,data,borderColor:color,backgroundColor:'transparent',tension:.3,borderWidth:w,borderDash:dash||[],spanGaps:true,yAxisID:yid||'y'});
+  let datasets, scales, tt;
+  if(m2){
+    datasets = [ mk(m1.label, series.map(s=>valOf(m1,s[scope])), getCss('--blue'), null, 2.5, 'y'),
+                 mk(m2.label, series.map(s=>valOf(m2,s[scope])), getCss('--co'), [5,3], 2.5, 'y2') ];
+    scales = {
+      y:{position:'left', beginAtZero:true, ticks:{font:{size:10}, callback:axCb(m1.kind)}, title:{display:true, text:m1.label, font:{size:9}}},
+      y2:{position:'right', beginAtZero:true, grid:{drawOnChartArea:false}, ticks:{font:{size:10}, callback:axCb(m2.kind)}, title:{display:true, text:m2.label, font:{size:9}}},
+      x:{ticks:{font:{size:9},maxRotation:60,minRotation:30}}
+    };
+    tt = `${m1.label} vs ${m2.label}${STATE.country!=='ALL'?' · '+STATE.country:''}`;
+  } else {
+    const all=series.map(s=>valOf(m1,s.ALL)), mx=series.map(s=>valOf(m1,s.MX)), co=series.map(s=>valOf(m1,s.CO));
+    if(STATE.country==='ALL') datasets=[mk('Total',all,getCss('--tot'),null,2.5), mk('MX',mx,getCss('--mx'),[4,3],1.5), mk('CO',co,getCss('--co'),[4,3],1.5)];
+    else if(STATE.country==='MX') datasets=[mk('Total (ref.)',all,'#c4cad6',[3,3],1.5), mk('MX',mx,getCss('--mx'),null,2.5)];
+    else datasets=[mk('Total (ref.)',all,'#c4cad6',[3,3],1.5), mk('CO',co,getCss('--co'),null,2.5)];
+    scales = { y:{beginAtZero:true, ticks:{font:{size:10}, callback:axCb(m1.kind)}}, x:{ticks:{font:{size:9},maxRotation:60,minRotation:30}} };
+    tt = m1.label + (m1.kind==='usd'?' (USD)':(m1.kind==='pct'?' (%)':''));
+  }
+  const ttEl=document.getElementById('trendTitle'); if(ttEl) ttEl.textContent = tt;
+  if(chartTrend) chartTrend.destroy();
+  const el=document.getElementById('chartTrend');
+  if(!el) return;
+  chartTrend = new Chart(el.getContext('2d'), {type:'line', data:{labels, datasets}, options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}},
+      tooltip:{callbacks:{label:(ctx)=>{ const kind = m2 ? (ctx.dataset.yAxisID==='y2'?m2.kind:m1.kind) : m1.kind; return `${ctx.dataset.label}: ${kind==='usd'?'$':''}${ctx.formattedValue}${kind==='pct'?'%':''}`; }}} },
+    scales
+  }});
+  const note = document.getElementById('trendNote');
+  if(note){ note.textContent = m2 ? `Comparando ${m1.label} (eje izquierdo) y ${m2.label} (eje derecho) · ${useWeek?'por semana':'por mes'}.` : `Mostrando ${m1.label} · ${useWeek?'por semana':'por mes'}.`; }
+}
+function chartOpts(kind){
+  const isUsd = kind==='usd', isPct = kind==='pct';
+  return { responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{position:'bottom', labels:{boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:(ctx)=> `${ctx.dataset.label}: ${isUsd?'$':''}${ctx.formattedValue}${isPct?'%':''}`}} },
+    scales:{ y:{beginAtZero:true, ticks:{font:{size:10}, callback:(v)=> isPct? v+'%' : (isUsd? '$'+v : v)}}, x:{ticks:{font:{size:9},maxRotation:60,minRotation:30}} } };
+}
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+/* ============================================================
+   DESGLOSE POR CAMPAÑA — acordeón con últimas 5 semanas y
+   variación % por métrica; selección múltiple para comparar.
+   ============================================================ */
+const METRIC_DEFS = [
+  {key:'spend',    label:'Gasto',      fmt:v=>fmtUSD(v),      invert:false, neutral:true},
+  {key:'cpc',      label:'CPC',        fmt:v=>fmtUSD2(v),     invert:true},
+  {key:'cpm',      label:'CPM',        fmt:v=>fmtUSD2(v),     invert:true},
+  {key:'frequency',label:'Frecuencia', fmt:v=>fmtNum(v,2),    invert:true},
+  {key:'ftir',     label:'FTIR',       fmt:v=>pctOrDash(v,1), invert:false},
+  {key:'ctrLink',  label:'CTR enlace', fmt:v=>pctOrDash(v,2), invert:false},
+  {key:'mql',      label:'Depósitos', fmt:v=>fmtNum(v),      invert:false},
+  {key:'cpmql',    label:'CPD',        fmt:v=>fmtUSD2(v),     invert:true},
+  {key:'cr',       label:'CR',         fmt:v=>pctOrDash(v,2), invert:false},
+];
+function deltaMini(cur, prev, invert, neutral){
+  const pct = pctDelta(cur, prev);
+  if(pct===null) return '';
+  const up = pct>=0;
+  if(neutral) return `<span class="dmini flat">${up?'▲':'▼'}${Math.abs(pct).toFixed(0)}%</span>`;
+  const good = invert ? !up : up;
+  return `<span class="dmini ${good?'good':'bad'}">${up?'▲':'▼'}${Math.abs(pct).toFixed(0)}%</span>`;
+}
+function scopeAgg(campaignIds, wk){
+  return aggregate(WEEKLY, r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r) && (campaignIds===null || campaignIds.includes(r.campaignId)));
+}
+function fiveWeekTableHtml(campaignIds){
+  const wk = selectedWeek();
+  const endIdx = WEEKS_LIST.indexOf(wk);
+  const weeks = WEEKS_LIST.slice(Math.max(0,endIdx-4), endIdx+1);
+  let rows='';
+  weeks.forEach(w=>{
+    const wIdx = WEEKS_LIST.indexOf(w);
+    const prevW = WEEKS_LIST[wIdx-1];
+    const agg = scopeAgg(campaignIds, w);
+    const prev = prevW ? scopeAgg(campaignIds, prevW) : null;
+    const isPartial = w.getTime()===currentWeekMonday.getTime();
+    let cells='';
+    METRIC_DEFS.forEach(m=>{
+      const v = agg[m.key], pv = prev? prev[m.key] : null;
+      cells += `<td>${m.fmt(v)} ${deltaMini(v,pv,m.invert,m.neutral)}</td>`;
+    });
+    rows += `<tr><td>${labelWeekFull(w)}${isPartial?' <span style="color:var(--amber);font-size:10px;">(parcial)</span>':''}</td>${cells}</tr>`;
+  });
+  return `<div class="tbl-wrap"><table>
+    <thead><tr><th>Semana</th>${METRIC_DEFS.map(m=>'<th>'+m.label+'</th>').join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="small-note">▲▼ = variación vs. la semana anterior · <span style="color:var(--green)">verde = mejoró</span>, <span style="color:var(--red)">rojo = empeoró</span> · el gasto es informativo (gris).</div>`;
+}
+function campSummaryChips(agg){
+  return `<span class="chip">${fmtUSD(agg.spend)}</span><span class="chip">${fmtNum(agg.mql)} dep.</span><span class="chip">CPD ${fmtUSD2(agg.cpmql)}</span><span class="chip">CR ${pctOrDash(agg.cr,2)}</span><span class="chip">Frec. ${fmtNum(agg.frequency,2)}</span>`;
+}
+function renderWeeklyTable(){
+  const wk = selectedWeek();
+  const camps = campaignsForCountry(STATE.country).filter(c => (scopeAgg([c.id], wk).spend||0) > 0);
+  STATE.tableCampaigns = STATE.tableCampaigns.filter(id=> camps.some(c=>c.id===id));
+  const active = STATE.tableCampaigns;
+  const chipsHtml = camps.map(c=>{
+    const on = active.includes(c.id);
+    return `<button class="camp-chip ${on?'on':''}" data-camp="${c.id}">${c.name}</button>`;
+  }).join('') + (active.length?`<button class="camp-chip clear" data-camp="__clear">✕ limpiar</button>`:'');
+  const shown = active.length ? camps.filter(c=>active.includes(c.id)) : camps;
+  const ordered = shown.map(c=>({...c, agg: scopeAgg([c.id], wk)})).sort((a,b)=>(b.agg.spend||0)-(a.agg.spend||0));
+  const totalIds = active.length ? active : null;
+  const totalAgg = scopeAgg(totalIds, wk);
+  let items = `<details class="camp-acc total" open><summary><b>${active.length? 'Total de las '+active.length+' campañas seleccionadas' : 'Total — todas las campañas'}</b><span class="acc-chips">${campSummaryChips(totalAgg)}</span></summary>${fiveWeekTableHtml(totalIds)}</details>`;
+  ordered.forEach(c=>{
+    items += `<details class="camp-acc" ${active.length?'open':''}><summary>${c.name}<span class="acc-chips">${campSummaryChips(c.agg)}</span></summary>${fiveWeekTableHtml([c.id])}</details>`;
+  });
+  return `<div class="card">
+    <h2>Desglose por campaña — últimas 5 semanas</h2>
+    <p class="desc">Las métricas junto a cada campaña son de la semana del ${labelWeekFull(wk)} (país: ${STATE.country==='ALL'?'Todos':STATE.country}). Haz clic en una campaña para desplegar su evolución de 5 semanas. Solo se muestran las campañas con gasto en esa semana. Selecciona 2 o más campañas arriba para compararlas abiertas lado a lado.</p>
+    <div class="subfilter" style="flex-wrap:wrap;">${chipsHtml}</div>
+    ${items}
+  </div>`;
+}
+
+/* ============================================================
+   CREATIVOS: dedup por nombre
+   ============================================================ */
+function dedupCreatives(rows){
+  const map = new Map();
+  rows.forEach(r=>{
+    if(r.excluded || r.dataIssue) return;
+    if(!map.has(r.name)) map.set(r.name, {name:r.name, country:r.country, spend:0, mql:0, impressions:0, linkClicks:0, creativeId:null, adId:null, bestSpend:-1, angle: classifyAngle(r.name), format: classifyFormat(r.name)});
+    const c = map.get(r.name);
+    c.spend += (r.spendUSD||0); c.mql += (r.mql||0); c.impressions += r.impressions; c.linkClicks += r.linkClicks;
+    const sp = r.spendUSD_raw||0;
+    if(sp > c.bestSpend){ c.bestSpend = sp; c.creativeId = r.creativeId || c.creativeId; c.adId = r.id || c.adId; }
+  });
+  return Array.from(map.values()).map(c=>({...c, cpmql: safeDiv(c.spend,c.mql), cr: safeDiv(c.mql,c.linkClicks)}));
+}
+
+/* ============================================================
+   PREVIEWS: link (siempre) + intento de miniatura.
+   Nota: este entorno bloquea el CDN de imágenes de Facebook y el conector
+   no entrega los bytes de la imagen. Se intenta cargar la miniatura igualmente;
+   si el entorno la bloquea, se muestra una tarjeta de identificación visual
+   con el texto real del anuncio. "Ver anuncio" abre el preview real de Meta.
+   ============================================================ */
+const sessionAssets = new Map();
+async function getCreativeMeta(creativeIds){
+  const ids = creativeIds.filter(Boolean);
+  if(!ids.length) return {};
+  if(!LIVE_MODE){
+    const out={};
+    ids.forEach(id=>{ if(SNAPSHOT && SNAPSHOT.creatives && SNAPSHOT.creatives[id]) out[id]=SNAPSHOT.creatives[id]; });
+    return out;
+  }
+  // caché de sesión: no repetir la llamada al cambiar semana/país
+  const out={}, missing=[];
+  ids.forEach(id=>{ if(sessionAssets.has('cm_'+id)) out[id]=sessionAssets.get('cm_'+id); else missing.push(id); });
+  if(!missing.length) return out;
+  try{
+    const res = await callTool(CREATIVES_TOOL, {ad_account_id:AD_ACCOUNT_ID, creative_ids: missing, fields:['thumbnail_url','image_url','body','title']});
+    (res.ad_creatives||[]).forEach(c=>{
+      const m = {thumb: c.image_url || c.thumbnail_url || null, body: c.body||null, title: c.title||null};
+      sessionAssets.set('cm_'+c.id, m); out[c.id]=m;
+    });
+  }catch(e){}
+  return out;
+}
+async function getPreviewLink(adId){
+  if(!adId) return null;
+  if(!LIVE_MODE){
+    // en modo archivo: usar el preview real de Meta si está en el snapshot (se renueva a diario,
+    // los links de preview de Meta caducan ~24h); si no, caer a Ads Manager.
+    const l = (SNAPSHOT && SNAPSHOT.previews && SNAPSHOT.previews[adId])
+      ? SNAPSHOT.previews[adId].replace(/&amp;/g,'&')
+      : 'https://business.facebook.com/adsmanager/manage/ads?selected_ad_ids='+adId;
+    sessionAssets.set('lnk_'+adId, l);
+    return l;
+  }
+  if(sessionAssets.has('lnk_'+adId)) return sessionAssets.get('lnk_'+adId);
+  let link=null;
+  try{
+    const r = await callToolFull(PREVIEW_TOOL, {ad_id: adId}, 1);
+    const txt = r.structuredContent ?? (r.content && r.content.find(c=>c.type==='text') ? JSON.parse(r.content.find(c=>c.type==='text').text) : null);
+    if(txt && txt.preview_url) link = txt.preview_url.replace(/&amp;/g,'&');
+    if(Array.isArray(r.content)){
+      for(const item of r.content){
+        if(item && item.type==='image'){
+          const data = item.data || (item.source && item.source.data);
+          const mime = item.mimeType || item.mime_type || (item.source && item.source.media_type) || 'image/png';
+          if(data){ sessionAssets.set('img_'+adId, 'data:'+mime+';base64,'+data); break; }
+        }
+      }
+    }
+  }catch(e){}
+  sessionAssets.set('lnk_'+adId, link);
+  return link;
+}
+const PALETTE = {'Video':'#7c5cff','Imagen':'#2f6fed','Otro/Sin dato':'#8a94a8'};
+
+/* ============================================================
+   TOP/BOTTOM CREATIVOS
+   ============================================================ */
+async function renderCreativesSection(container){
+  const wk = selectedWeek();
+  const scopeRows = WEEKLY.filter(r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r));
+  const creatives = dedupCreatives(scopeRows);
+  const totalSpend = creatives.reduce((a,c)=>a+c.spend,0);
+  const totalMql = creatives.reduce((a,c)=>a+c.mql,0);
+  const avgCpmql = safeDiv(totalSpend, totalMql);
+  // --- Evaluación (USD): bandas de CPMQL + umbral de gasto para juzgar ---
+  const CPMQL_BUENO = 90, CPMQL_MALO = 110, GASTO_MIN = 250;
+  const judged = creatives.filter(c=> c.spend >= GASTO_MIN);
+  const avgMqlJudged = judged.length ? judged.reduce((a,c)=>a+c.mql,0)/judged.length : 0;
+  function bandOf(c){ if(c.mql===0||c.cpmql===null) return 'malo'; return c.cpmql<=CPMQL_BUENO?'bueno':(c.cpmql<=CPMQL_MALO?'aceptable':'malo'); }
+  function quadrant(c){
+    if(c.spend < GASTO_MIN) return 'aprendizaje';
+    const b = bandOf(c); const alto = c.mql>0 && c.mql >= avgMqlJudged;
+    if(b==='malo') return 'cortar';
+    if(b==='bueno') return alto?'estrella':'promesa';
+    return alto?'motor':'vigilar';
+  }
+  function qChip(c){
+    const m={estrella:['var(--green-soft)','var(--green)','Estrella'],motor:['var(--amber-soft)','var(--amber)','Motor'],promesa:['var(--blue-soft)','var(--blue)','Promesa'],vigilar:['var(--amber-soft)','var(--amber)','Vigilar'],cortar:['var(--red-soft)','var(--red)','Cortar'],aprendizaje:['#eef0f4','var(--muted)','En aprendizaje']};
+    const v=m[quadrant(c)]; return `<span class="chip" style="background:${v[0]};color:${v[1]};font-weight:600;">${v[2]}</span>`;
+  }
+  function cpmqlChip(c){
+    if(c.mql===0||c.cpmql===null) return `<span class="chip" style="background:var(--red-soft);color:var(--red);">CPD —</span>`;
+    const b=bandOf(c); const col=b==='bueno'?['var(--green-soft)','var(--green)']:(b==='aceptable'?['var(--amber-soft)','var(--amber)']:['var(--red-soft)','var(--red)']);
+    return `<span class="chip" style="background:${col[0]};color:${col[1]};">CPD ${fmtUSD2(c.cpmql)}</span>`;
+  }
+  // Mejores = eficientes con volumen (bueno/aceptable), priorizando banda y luego volumen
+  const top3 = judged.filter(c=> c.mql>0 && c.cpmql!==null && c.cpmql<=CPMQL_MALO)
+    .sort((a,b)=> ((bandOf(a)==='bueno'?0:1)-(bandOf(b)==='bueno'?0:1)) || (b.mql-a.mql) || ((a.cpmql||1e12)-(b.cpmql||1e12))).slice(0,3);
+  // Peores = fugas reales: gastó ≥umbral y es malo o 0 MQL, ordenado por plata quemada
+  const bottom3 = judged.filter(c=> !top3.includes(c) && (c.mql===0 || (c.cpmql!==null && c.cpmql>CPMQL_MALO)))
+    .sort((a,b)=> b.spend-a.spend).slice(0,3);
+
+  container.innerHTML = `<div class="card"><h2>Top 3 mejores creativos</h2><p class="desc">Semana del ${labelWeekFull(wk)} · País: ${STATE.country==='ALL'?'Todos':STATE.country}. Eficientes con volumen: CPD bueno (≤$90) o aceptable (≤$110), con gasto ≥$250 para juzgar. Anuncios con el mismo nombre se unifican.</p><div class="creative-grid" id="topCreatives"><p class="small-note">Cargando…</p></div></div>
+  <div class="card"><h2>Top 3 peores creativos</h2><p class="desc">Fugas reales: gastaron ≥$250 y quedaron en CPD malo (&gt;$110) o 0 depósitos. Ordenados por plata quemada. Los de gasto &lt;$250 no se juzgan (en aprendizaje).</p><div class="creative-grid" id="bottomCreatives"><p class="small-note">Cargando…</p></div></div>`;
+
+  const all6 = [...top3, ...bottom3];
+  const [creativeMeta] = await Promise.all([
+    getCreativeMeta(all6.map(c=>c.creativeId)),
+    ...all6.map(c=>getPreviewLink(c.adId))
+  ]);
+
+  function cardHtml(c, kind){
+    const meta = (c.creativeId && creativeMeta[c.creativeId]) || {};
+    const link = sessionAssets.get('lnk_'+c.adId) || null;
+    const inlineImg = sessionAssets.get('img_'+c.adId) || null;
+    const vsAvg = (avgCpmql && c.cpmql!==null) ? ((c.cpmql-avgCpmql)/avgCpmql*100) : null;
+    const spendShare = totalSpend? (c.spend/totalSpend*100):null;
+    const color = PALETTE[c.format]||'#8a94a8';
+    const bodyTxt = (meta.body||meta.title||'').slice(0,150);
+    const mock = `<div class="mock-ad" ${meta.thumb&&!inlineImg?'data-pending="1"':''}>
+        <div class="mh"><div class="avatar" style="background:${color};">${c.format==='Video'?'▶':'◻'}</div>
+          <div><div class="pg">Moons ${c.country}</div><div class="sp">Publicidad · ${c.format}</div></div></div>
+        <div class="mbody">${bodyTxt ? bodyTxt+(bodyTxt.length>=150?'…':'') : '<span style="color:var(--muted)">('+c.angle+' — abre "Ver anuncio" para ver la pieza)</span>'}</div>
+        <div class="mtags"><span class="mtag">${c.format}</span><span class="mtag">${c.angle}</span></div>
+      </div>`;
+    // intento de imagen real; si el entorno la bloquea, cae al mock automáticamente (ver renderCard)
+    const imgSrc = inlineImg || meta.thumb;
+    return {c, kind, link, imgSrc, mock, vsAvg, spendShare};
+  }
+  function renderCard(d){
+    const {c, kind, link, imgSrc, mock, vsAvg, spendShare} = d;
+    const id = 'cc_'+Math.random().toString(36).slice(2,9);
+    const thumbHtml = imgSrc
+      ? `<div id="${id}"><img class="thumb" src="${imgSrc}" alt=""></div>`
+      : `<div id="${id}">${mock}</div>`;
+    // registrar fallback tras insertar
+    setTimeout(()=>{
+      const holder = document.getElementById(id);
+      if(!holder) return;
+      const img = holder.querySelector('img');
+      if(img){
+        img.addEventListener('error', ()=>{ holder.innerHTML = mock; });
+        if(img.complete && img.naturalWidth===0){ holder.innerHTML = mock; }
+      }
+    }, 60);
+    return `<div class="creative-card">
+      ${thumbHtml}
+      <div class="body">
+        <div class="name"><span class="pill ${c.country.toLowerCase()}">${c.country}</span> ${c.name}</div>
+        <div class="metrics">
+          ${qChip(c)}
+          <span class="chip">${fmtNum(c.mql)} dep.</span>
+          ${cpmqlChip(c)}
+          ${spendShare!==null?`<span class="chip">${spendShare.toFixed(1)}% del gasto</span>`:''}
+        </div>
+        ${link?`<a class="preview" href="${link}" target="_blank" rel="noopener">Ver anuncio ↗</a>`:'<span class="small-note">Preview no disponible</span>'}
+      </div>
+    </div>`;
+  }
+  const topEl = document.getElementById('topCreatives');
+  const botEl = document.getElementById('bottomCreatives');
+  if(topEl) topEl.innerHTML = top3.map(c=>renderCard(cardHtml(c,'top'))).join('') || '<p class="small-note">Sin creativos con depósitos en esta semana/país.</p>';
+  if(botEl) botEl.innerHTML = bottom3.map(c=>renderCard(cardHtml(c,'bottom'))).join('') || '<p class="small-note">Sin fugas esta semana: ningún creativo con gasto ≥$250 quedó en CPD malo (&gt;$110) ni en 0 depósitos.</p>';
+  return {creatives, wk};
+}
+
+/* ============================================================
+   APRENDIZAJES
+   ============================================================ */
+function renderLearnings(creatives){
+  const byFormat = {}, byAngle = {};
+  creatives.forEach(c=>{
+    byFormat[c.format] = byFormat[c.format]||{spend:0,mql:0,impressions:0,linkClicks:0,n:0};
+    const f=byFormat[c.format]; f.spend+=c.spend; f.mql+=c.mql; f.impressions+=c.impressions; f.linkClicks+=c.linkClicks; f.n++;
+    byAngle[c.angle] = byAngle[c.angle]||{spend:0,mql:0,impressions:0,linkClicks:0,n:0};
+    const a=byAngle[c.angle]; a.spend+=c.spend; a.mql+=c.mql; a.impressions+=c.impressions; a.linkClicks+=c.linkClicks; a.n++;
+  });
+  function rowsFor(obj){
+    return Object.entries(obj).map(([k,v])=>({key:k, ...v, cpmql:safeDiv(v.spend,v.mql), ctr:safeDiv(v.linkClicks,v.impressions), cr:safeDiv(v.mql,v.linkClicks)})).sort((a,b)=>(b.mql||0)-(a.mql||0));
+  }
+  function tableHtml(rows, keyLabel){
+    let body='';
+    rows.forEach(r=>{ body+=`<tr><td>${r.key}</td><td>${fmtNum(r.mql)}</td><td>${fmtUSD2(r.cpmql)}</td><td>${pctOrDash(r.ctr,2)}</td><td>${pctOrDash(r.cr,2)}</td></tr>`; });
+    return `<div class="tbl-wrap"><table><thead><tr><th>${keyLabel}</th><th>Depósitos</th><th>CPD</th><th>CTR enlace</th><th>CR</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  }
+  const angleRows = rowsFor(byAngle);
+  const totalAds = creatives.length;
+  let barsHtml='';
+  angleRows.slice().sort((a,b)=>b.n-a.n).forEach(r=>{
+    barsHtml += `<div class="bar-row"><div class="lbl">${r.key}</div><div class="bar-track"><div class="bar-fill" style="width:${totalAds?(r.n/totalAds*100):0}%"></div></div><div class="bar-n">${r.n}</div></div>`;
+  });
+  return `<div class="card">
+    <h2>Aprendizajes</h2>
+    <p class="desc">Formato y ángulo inferidos del nombre del anuncio — misma semana/país que la sección de creativos.</p>
+    <div class="section-grid2">
+      <div><h3 style="font-size:13px;margin:0 0 8px;">Formato</h3>${tableHtml(rowsFor(byFormat),'Formato')}</div>
+      <div><h3 style="font-size:13px;margin:0 0 8px;">Ángulo de comunicación</h3>${tableHtml(angleRows,'Ángulo')}</div>
+    </div>
+    <h3 style="font-size:13px;margin:18px 0 8px;">Reparto de ángulos (nº de creativos únicos con actividad)</h3>
+    ${barsHtml}
+  </div>`;
+}
+
+/* ============================================================
+   MX vs CO
+   ============================================================ */
+function renderCountryCompare(wk){
+  const mx = aggregate(WEEKLY, r=> r.country==='MX' && weekFilterFn(wk.getTime())(r));
+  const co = aggregate(WEEKLY, r=> r.country==='CO' && weekFilterFn(wk.getTime())(r));
+  const rowsHtml = [
+    ['Gasto', fmtUSD(mx.spend), fmtUSD(co.spend)],
+    ['Depósitos', fmtNum(mx.mql), fmtNum(co.mql)],
+    ['CPD', fmtUSD2(mx.cpmql), fmtUSD2(co.cpmql)],
+    ['CR', pctOrDash(mx.cr,2), pctOrDash(co.cr,2)],
+    ['Frecuencia', fmtNum(mx.frequency,2), fmtNum(co.frequency,2)],
+  ].map(r=>`<tr><td>${r[0]}</td><td class="mx">${r[1]}</td><td class="co">${r[2]}</td></tr>`).join('');
+
+  const creatives = dedupCreatives(WEEKLY.filter(r=> weekFilterFn(wk.getTime())(r)));
+  const base = new Map();
+  creatives.forEach(c=>{
+    const key = c.name.replace(/^(mx_|co_)/i,'');
+    if(!base.has(key)) base.set(key,{});
+    base.get(key)[c.country]=c;
+  });
+  let sharedRows='', sharedCount=0;
+  Array.from(base.entries()).forEach(([key,obj])=>{
+    if(obj.MX && obj.CO){
+      sharedCount++;
+      sharedRows += `<tr><td>${key}</td>
+        <td class="mx">${fmtNum(obj.MX.mql)} dep / ${fmtUSD2(obj.MX.cpmql)}</td>
+        <td class="co">${fmtNum(obj.CO.mql)} dep / ${fmtUSD2(obj.CO.cpmql)}</td></tr>`;
+    }
+  });
+  if(!sharedRows) sharedRows = '<tr><td colspan="3" class="small-note">No hay anuncios con el mismo nombre base en ambos países esta semana.</td></tr>';
+
+  function bestAngle(country){
+    const rows = creatives.filter(c=>c.country===country);
+    const byAngle={};
+    rows.forEach(c=>{ byAngle[c.angle]=byAngle[c.angle]||{mql:0,spend:0}; byAngle[c.angle].mql+=c.mql; byAngle[c.angle].spend+=c.spend; });
+    const best = Object.entries(byAngle).map(([k,v])=>({k,...v})).filter(x=>x.mql>0).sort((a,b)=>b.mql-a.mql)[0];
+    return best ? best.k : 'sin datos suficientes';
+  }
+  const bMx = bestAngle('MX'), bCo = bestAngle('CO');
+  let insight = `<li>Mejor ángulo en MX: <b>${bMx}</b> · Mejor ángulo en CO: <b>${bCo}</b>.`;
+  insight += (bMx!==bCo && bMx!=='sin datos suficientes' && bCo!=='sin datos suficientes') ? ' Son distintos — considerar cruzar el ganador de un país al otro.</li>' : '</li>';
+  insight += `<li>${sharedCount} creativo(s) compartidos entre países esta semana (mismo nombre base).</li>`;
+
+  return `<div class="card">
+    <h2>México vs. Colombia</h2>
+    <p class="desc">Semana del ${labelWeekFull(wk)}.</p>
+    <div class="section-grid2">
+      <div><table><thead><tr><th>Métrica</th><th>MX</th><th>CO</th></tr></thead><tbody class="country-compare-table">${rowsHtml}</tbody></table></div>
+      <div><table><thead><tr><th>Creativo compartido</th><th>MX</th><th>CO</th></tr></thead><tbody>${sharedRows}</tbody></table></div>
+    </div>
+    <ul class="insight-list" style="margin-top:14px;">${insight}</ul>
+  </div>`;
+}
+
+/* ============================================================
+   EXTRAS
+   ============================================================ */
+function renderExtras(){
+  const wk = selectedWeek();
+  const idx = WEEKS_LIST.indexOf(wk); const wkPrev = WEEKS_LIST[idx-1];
+  let banners='';
+  if(wkPrev){
+    const cur = aggregate(WEEKLY, r=>countryFilterFn(STATE.country)(r)&&weekFilterFn(wk.getTime())(r));
+    const prev = aggregate(WEEKLY, r=>countryFilterFn(STATE.country)(r)&&weekFilterFn(wkPrev.getTime())(r));
+    const pct = pctDelta(cur.cpmql, prev.cpmql);
+    if(pct!==null && pct>25){
+      banners += `<div class="alert-banner warn">⚠️ El CPD subió ${pct.toFixed(0)}% vs. la semana anterior (${fmtUSD2(prev.cpmql)} → ${fmtUSD2(cur.cpmql)}).</div>`;
+    }
+  }
+  const scopeRows = WEEKLY.filter(r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r) && !r.excluded && !r.dataIssue);
+  const creatives = dedupCreatives(scopeRows);
+  const totalSpend = creatives.reduce((a,c)=>a+c.spend,0);
+  const sorted = [...creatives].sort((a,b)=>b.spend-a.spend);
+  const top20n = Math.max(1, Math.ceil(sorted.length*0.2));
+  const concentration = totalSpend? (sorted.slice(0,top20n).reduce((a,c)=>a+c.spend,0)/totalSpend*100):0;
+  const fatigue = scopeRows.filter(r=> r.reach>0 && (r.impressions/r.reach)>3);
+  return `${banners}<div class="card">
+    <h2>Extras — lecturas rápidas</h2>
+    <ul class="insight-list">
+      <li>Concentración: el 20% de los creativos (${top20n} de ${sorted.length}) concentra el <b>${concentration.toFixed(0)}%</b> del gasto semanal. ${concentration>60?'Alta dependencia de pocos creativos.':'Distribución razonable.'}</li>
+      <li>${fatigue.length ? fatigue.length+' anuncio(s) con frecuencia > 3 esta semana (riesgo de fatiga).' : 'Ningún anuncio supera frecuencia 3 esta semana.'}</li>
+    </ul>
+  </div>`;
+}
+
+/* ============================================================
+   PRÓXIMOS PASOS — recomendaciones automáticas (máx. 3)
+   ============================================================ */
+function renderNextSteps(){
+  const wk = selectedWeek();
+  const idx = WEEKS_LIST.indexOf(wk); const wkPrev = WEEKS_LIST[idx-1];
+  const scope = r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r);
+  const agg = aggregate(WEEKLY, scope);
+  const prev = wkPrev ? aggregate(WEEKLY, r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wkPrev.getTime())(r)) : null;
+  const creatives = dedupCreatives(WEEKLY.filter(scope));
+  const totalSpend = creatives.reduce((a,c)=>a+c.spend,0);
+  const avgCpmql = safeDiv(totalSpend, creatives.reduce((a,c)=>a+c.mql,0));
+  const CPMQL_BUENO = 90, CPMQL_MALO = 110, GASTO_MIN = 250;
+  const recs = [];
+  // 1) recortar la fuga (malo o 0 MQL con gasto suficiente) y realocar
+  const winners = creatives.filter(c=> c.spend>=GASTO_MIN && c.mql>0 && c.cpmql!==null && c.cpmql<=CPMQL_BUENO).sort((a,b)=> (b.mql-a.mql) || ((a.cpmql||1e12)-(b.cpmql||1e12)));
+  const losers = creatives.filter(c=> c.spend>=GASTO_MIN && (c.mql===0 || (c.cpmql!==null && c.cpmql>CPMQL_MALO))).sort((a,b)=>b.spend-a.spend);
+  if(losers.length){
+    const l = losers[0]; const w = winners[0];
+    const estMql = (w && w.cpmql) ? Math.floor(l.spend / w.cpmql) : (avgCpmql? Math.floor(l.spend/avgCpmql):null);
+    recs.push(`<b>Recorta o pausa "${l.name}"</b>: gastó ${fmtUSD(l.spend)} (${(l.spend/totalSpend*100).toFixed(0)}% del total) con ${l.mql===0?'0 depósitos':fmtNum(l.mql)+' dep. a CPD '+fmtUSD2(l.cpmql)+', por encima de tu techo de $110'}. Reasignar ese presupuesto ${w?'a "'+w.name+'"':'a los creativos eficientes (CPD ≤$90)'}${estMql?' podría producir ~'+estMql+' depósitos más por semana a costos actuales':''}.`);
+  }
+  // 2) escalar al ganador si aún tiene poco share
+  if(winners.length){
+    const w = winners[0]; const share = totalSpend? w.spend/totalSpend:0;
+    if(share < 0.3) recs.push(`<b>Escala "${w.name}"</b>: CPD ${fmtUSD2(w.cpmql)} (banda buena, ≤$90) con solo ${(share*100).toFixed(1)}% del gasto. Sube su presupuesto +30–50% de forma gradual (espera ~48h entre cambios para no reiniciar el aprendizaje) y, si aún no corre en el otro país, duplícalo allá.`);
+  }
+  // 3) arbitraje entre países (solo con filtro Todos)
+  if(STATE.country==='ALL'){
+    const mx = aggregate(WEEKLY, r=> r.country==='MX' && weekFilterFn(wk.getTime())(r));
+    const co = aggregate(WEEKLY, r=> r.country==='CO' && weekFilterFn(wk.getTime())(r));
+    if(mx.mql>=3 && co.mql>=3 && mx.cpmql && co.cpmql){
+      const cheap = mx.cpmql<co.cpmql? {n:'MX',a:mx}:{n:'CO',a:co};
+      const exp = cheap.n==='MX'? {n:'CO',a:co}:{n:'MX',a:mx};
+      const gap = (exp.a.cpmql-cheap.a.cpmql)/cheap.a.cpmql*100;
+      if(gap>40) recs.push(`<b>Reequilibra presupuesto entre países</b>: el CPD de ${cheap.n} (${fmtUSD2(cheap.a.cpmql)}) es ${gap.toFixed(0)}% más eficiente que el de ${exp.n} (${fmtUSD2(exp.a.cpmql)}). Mueve 10–20% del presupuesto de ${exp.n} hacia ${cheap.n} esta semana y, en paralelo, prueba en ${exp.n} los ángulos ganadores de ${cheap.n} para cerrar la brecha sin abandonar el mercado.`);
+    }
+  }
+  // 4) fatiga creativa
+  const scopeRows = WEEKLY.filter(r=> scope(r) && !r.excluded && !r.dataIssue);
+  const fat = scopeRows.filter(r=> r.reach>0 && (r.impressions/r.reach)>3);
+  if(fat.length){
+    const fatSpend = fat.reduce((a,r)=>a+(r.spendUSD||0),0);
+    recs.push(`<b>Renueva creativos fatigados</b>: ${fat.length} anuncio(s) con frecuencia >3 concentran ${fmtUSD(fatSpend)} de gasto esta semana. Prepara 2–3 variantes nuevas (mismo ángulo, distinto hook en los primeros 3 segundos) y rótalas antes de que el CPD se deteriore.`);
+  }
+  // 5) diagnóstico si el CPMQL se disparó
+  if(prev && agg.cpmql && prev.cpmql){
+    const d = pctDelta(agg.cpmql, prev.cpmql);
+    if(d!==null && d>25) recs.push(`<b>Diagnostica la subida del CPD</b>: +${d.toFixed(0)}% vs. la semana pasada (${fmtUSD2(prev.cpmql)} → ${fmtUSD2(agg.cpmql)}). Orden de revisión sugerido: fatiga (frecuencia), cambios de audiencia/puja, y calidad del clic (CR pasó de ${pctOrDash(prev.cr,2)} a ${pctOrDash(agg.cr,2)}).`);
+  }
+  // 6) ángulo ganador sub-representado
+  const byAngle={};
+  creatives.forEach(c=>{ byAngle[c.angle]=byAngle[c.angle]||{mql:0,spend:0,n:0}; byAngle[c.angle].mql+=c.mql; byAngle[c.angle].spend+=c.spend; byAngle[c.angle].n++; });
+  const bestA = Object.entries(byAngle).map(([k,v])=>({k,...v,cpmql:safeDiv(v.spend,v.mql)})).filter(x=>x.mql>=2 && x.cpmql && x.cpmql<=CPMQL_MALO).sort((a,b)=>b.mql-a.mql)[0];
+  if(bestA && creatives.length && bestA.n/creatives.length < 0.25){
+    recs.push(`<b>Produce más variantes del ángulo "${bestA.k}"</b>: genera ${fmtNum(bestA.mql)} depósitos a CPD ${fmtUSD2(bestA.cpmql)} (dentro de tu techo) pero solo son ${bestA.n} de ${creatives.length} creativos activos. Brief para 2–3 piezas nuevas de este ángulo, en video e imagen.`);
+  }
+  const top3 = recs.slice(0,3);
+  const body = top3.length
+    ? '<ol class="insight-list next-steps">'+top3.map(r=>'<li>'+r+'</li>').join('')+'</ol>'
+    : '<p class="small-note">Sin señales fuertes esta semana — mantener el plan y acumular más datos.</p>';
+  return `<div class="card">
+    <h2>Próximos pasos — acciones para la próxima semana</h2>
+    <p class="desc">Máximo 3 acciones priorizadas por impacto, generadas automáticamente con los datos de la semana del ${labelWeekFull(wk)} (país: ${STATE.country==='ALL'?'Todos':STATE.country}). Cambian según la semana/país que filtres.</p>
+    ${body}
+  </div>`;
+}
+
+/* ============================================================
+   UBICACIONES (placements)
+   ============================================================ */
+const PLAT_LABEL = {facebook:'Facebook', instagram:'Instagram', messenger:'Messenger', audience_network:'Audience Network'};
+function platLabel(p){ return PLAT_LABEL[p] || (p && p!=='(s/d)' ? p.charAt(0).toUpperCase()+p.slice(1) : '(sin dato)'); }
+function posLabel(p){ if(!p||p==='(s/d)') return '(sin dato)'; return p.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase()); }
+const PLACEMENT_MIN_DEP = 5, PLACEMENT_CPD_BUENO = 90, PLACEMENT_CPD_MALO = 110;
+function renderPlacements(){
+  let rows = PLACEMENTS.filter(p => STATE.country==='ALL' ? true : p.country===STATE.country);
+  const campMap = new Map();
+  rows.forEach(p=>{ if(!campMap.has(p.campaign_id)) campMap.set(p.campaign_id, p.campaign_name); });
+  const camps = Array.from(campMap.entries()).map(([id,name])=>({id,name})).sort((a,b)=>a.name.localeCompare(b.name));
+  if(STATE.placementCampaign!=='ALL' && !campMap.has(STATE.placementCampaign)) STATE.placementCampaign='ALL';
+  const scoped = STATE.placementCampaign==='ALL' ? rows : rows.filter(p=>p.campaign_id===STATE.placementCampaign);
+  const agg = new Map();
+  scoped.forEach(p=>{
+    const key = p.platform+'||'+p.position;
+    if(!agg.has(key)) agg.set(key,{platform:p.platform, position:p.position, spend:0, impressions:0, clicks:0, landing:0, lead:0, conv:0, checkout:0, anticipo:0});
+    const a=agg.get(key); a.spend+=p.spendUSD; a.impressions+=p.impressions; a.clicks+=p.clicks; a.landing+=(p.landing||0); a.lead+=p.lead; a.conv+=(p.conv||0); a.checkout+=p.checkout; a.anticipo+=p.anticipo;
+  });
+  const list = Array.from(agg.values()).sort((x,y)=>y.spend-x.spend);
+  const totalSpend = list.reduce((s,x)=>s+x.spend,0);
+  const totalDep = list.reduce((s,x)=>s+x.anticipo,0);
+  function cpdCell(x){
+    if(x.anticipo < PLACEMENT_MIN_DEP) return `<span class="chip">— <span style="color:var(--muted)">(${fmtNum(x.anticipo)} dep · pocos datos)</span></span>`;
+    const cpd = x.spend/x.anticipo;
+    const col = cpd<=PLACEMENT_CPD_BUENO?['var(--green-soft)','var(--green)']:(cpd<=PLACEMENT_CPD_MALO?['var(--amber-soft)','var(--amber)']:['var(--red-soft)','var(--red)']);
+    return `<span class="chip" style="background:${col[0]};color:${col[1]};font-weight:600;">${fmtUSD2(cpd)}</span>`;
+  }
+  let body='';
+  list.forEach(x=>{
+    const share = totalSpend? (x.spend/totalSpend*100):0;
+    body += `<tr><td>${platLabel(x.platform)} · ${posLabel(x.position)}</td><td>${fmtUSD(x.spend)}</td><td>${share.toFixed(0)}%</td><td>${fmtNum(x.impressions)}</td><td>${fmtNum(x.clicks)}</td><td>${fmtNum(x.landing)}</td><td>${fmtNum(x.lead)}</td><td>${fmtNum(x.conv)}</td><td>${fmtNum(x.checkout)}</td><td>${fmtNum(x.anticipo)}</td><td>${cpdCell(x)}</td></tr>`;
+  });
+  if(!body) body = `<tr><td colspan="11" class="small-note">Aún no hay datos de ubicaciones. Aparecen después de la próxima corrida del robot.</td></tr>`;
+  const campOpts = `<option value="ALL">Todas las campañas</option>` + camps.map(c=>`<option value="${c.id}" ${STATE.placementCampaign===c.id?'selected':''}>${c.name}</option>`).join('');
+  return `<div class="card">
+    <h2>Ubicaciones — dónde convierte tu inversión</h2>
+    <p class="desc">Últimos 90 días · gasto en USD · plataforma + posición. Semáforo de CPD igual al resto (bueno ≤$90, regular $91-110, malo ≥$111). Las ubicaciones con menos de ${PLACEMENT_MIN_DEP} depósitos se marcan "pocos datos" — no juzgues su CPD todavía. Tus campañas son Advantage+ (ubicaciones automáticas): usa esto para mover presupuesto o probar ubicaciones manuales, no para excluir a la ligera.</p>
+    <div class="subfilter"><label>Campaña</label><select id="placementCampSel">${campOpts}</select></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Ubicación</th><th>Gasto</th><th>%</th><th>Impres.</th><th>Clics</th><th>Página</th><th>Lead</th><th>Conversac.</th><th>Checkout</th><th>Depósitos</th><th>CPD</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <div class="small-note">Scope: ${STATE.placementCampaign==='ALL'?'todas las campañas':(campMap.get(STATE.placementCampaign)||'')} · País: ${STATE.country==='ALL'?'Todos':STATE.country} · ${fmtNum(totalDep)} depósitos en ${fmtUSD(totalSpend)} (90 días).</div>
+  </div>`;
+}
+function wirePlacementSel(){
+  const s=document.getElementById('placementCampSel');
+  if(s) s.addEventListener('change', e=>{ STATE.placementCampaign=e.target.value; document.getElementById('placementsSlot').innerHTML = renderPlacements(); wirePlacementSel(); });
+}
+
+/* ============================================================
+   EMBUDO (drop-off)
+   ============================================================ */
+function renderFunnel(){
+  const wk = selectedWeek();
+  const rows = WEEKLY.filter(r=> countryFilterFn(STATE.country)(r) && weekFilterFn(wk.getTime())(r) && !r.excluded && !r.dataIssue);
+  const web = {clics:0,landing:0,lead:0,checkout:0,dep:0};
+  const msg = {clics:0,conv:0,checkout:0,dep:0};
+  rows.forEach(r=>{ const isM=isMsgCampaign(r.campaignId); const o=isM?msg:web;
+    o.clics+=r.linkClicks; o.checkout+=(r.checkout||0); o.dep+=(r.mql||0);
+    if(isM) o.conv+=(r.conv||0); else { o.landing+=(r.landing||0); o.lead+=(r.lead||0); }
+  });
+  function funnelCol(title, steps){
+    const top = steps.length? steps[0].n : 0;
+    let h = `<div class="funnel-col"><h3 style="font-size:13px;margin:0 0 10px;">${title}</h3>`;
+    steps.forEach((s,i)=>{
+      const w = top>0? Math.max(3, s.n/top*100) : 0;
+      h += `<div class="funnel-step"><div class="funnel-bar" style="width:${w}%;"></div><span class="funnel-lbl">${s.label}</span><span class="funnel-n">${fmtNum(s.n)}</span></div>`;
+      if(i<steps.length-1){ const nx=steps[i+1].n; const cr=s.n>0?(nx/s.n*100):null; h += `<div class="funnel-cr">↓ ${cr===null?'—':cr.toFixed(1)+'%'}</div>`; }
+    });
+    return h + `</div>`;
+  }
+  const webSteps=[{label:'Clics',n:web.clics},{label:'Vista de página',n:web.landing},{label:'Lead',n:web.lead},{label:'Checkout',n:web.checkout},{label:'Depósito',n:web.dep}];
+  const msgSteps=[{label:'Clics',n:msg.clics},{label:'Conversación',n:msg.conv},{label:'Checkout',n:msg.checkout},{label:'Depósito',n:msg.dep}];
+  const hasWeb = web.clics>0 || web.landing>0 || web.dep>0;
+  const hasMsg = msg.clics>0 || msg.conv>0 || msg.dep>0;
+  return `<div class="card">
+    <h2>Embudo — dónde se cae la gente</h2>
+    <p class="desc">Semana del ${labelWeekFull(wk)} · País: ${STATE.country==='ALL'?'Todos':STATE.country}. Cada barra es un paso del funnel; el <b>↓ %</b> es cuántos pasan al siguiente. Web y WhatsApp por separado.</p>
+    <div class="funnel-wrap">
+      ${hasWeb?funnelCol('Web',webSteps):''}
+      ${hasMsg?funnelCol('WhatsApp',msgSteps):''}
+      ${(!hasWeb&&!hasMsg)?'<p class="small-note">Sin actividad esta semana/país.</p>':''}
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   METODOLOGÍA
+   ============================================================ */
+function renderMethodology(){
+  return `<details class="methodology"><summary>Metodología y notas (leer antes de presentar)</summary>
+    <ul>
+      <li><b>Alcance:</b> las 2 cuentas de Moons (Colombia 285086213215776 en COP y México 633488553830053 en MXN). El país de cada anuncio lo define la cuenta a la que pertenece. Fuente única: datos a nivel de anuncio.</li>
+      <li><b>Depósito:</b> evento <b>Anticipo</b> únicamente, leído de la conversión personalizada 828103137997978 (idéntica en ambas cuentas). No es el evento "depósito" del píxel: es Anticipo, que aquí mostramos como "depósito". Conteo validado contra Ads Manager (semana 3-9 ago: CO 8+4+11=23 ✓).</li>
+      <li><b>CPD</b> (costo por depósito) = gasto ÷ depósitos.</li>
+      <li><b>Ubicaciones:</b> desglose por plataforma + posición de los últimos 90 días, a nivel campaña, con la tasa de cambio del mes más reciente. Un mínimo de 5 depósitos para juzgar el CPD de una ubicación.</li>
+      <li><b>Funnel:</b> Web = Clic → Lead (evento <b>Lead-Server</b>) → Checkout (<b>Checkout WebView</b>, id por país) → Depósito. WhatsApp = Clic → Conversación iniciada (mensajería) → Checkout → Depósito. En el gráfico de tendencia eliges métrica y flujo; los costos = gasto del flujo ÷ evento, y los % son de un paso al siguiente.</li>
+      <li>No se excluye ningún anuncio: todos los que tuvieron impresiones cuentan.</li>
+      <li><b>Moneda:</b> cada gasto se convierte a USD con la tasa histórica del mes del dato (COP y MXN, vía API de divisas gratuita). Así los valores históricos son fieles y no se distorsionan por el tipo de cambio de hoy. El reporte no vuelve a convertir: ya llega en USD.</li>
+      <li><b>CPC</b> = gasto ÷ clics (todos) · <b>CPM</b> = gasto ÷ impresiones × 1000 · <b>CTR enlace</b> = clics en el enlace ÷ impresiones · <b>CR</b> = depósitos ÷ clics en el enlace · <b>FTIR</b> = alcance ÷ impresiones (coincide con tu métrica personalizada de Ads Manager) · <b>Frecuencia</b> = impresiones ÷ alcance.</li>
+      <li><b>Semanas</b> = lunes a domingo, todas las de 2026. La semana en curso se marca como parcial.</li>
+      <li><b>Actualización:</b> un robot en la nube regenera los datos cada día a las 7:00 a.m. (hora Colombia). El reporte siempre muestra la última foto generada.</li>
+      <li><b>Miniaturas:</b> abierto en el navegador, las miniaturas de los anuncios cargan normalmente. "Ver anuncio ↗" abre el preview oficial de Meta (el link se renueva a diario).</li>
+      
+      <li>Ángulo/formato se infieren del nombre del anuncio (diccionario editable).</li>
+      ${RAW.truncationWarnings.length? '<li style="color:var(--red);">'+RAW.truncationWarnings.join('<br>')+'</li>':''}
+    </ul>
+  </details>`;
+}
+
+/* ============================================================
+   ORQUESTACIÓN
+   ============================================================ */
+async function renderAll(){
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    ${RAW.truncationWarnings.length ? '<div class="alert-banner warn">'+RAW.truncationWarnings.join('<br>')+'</div>' : ''}
+    <div class="header">
+      <div>
+        <h1>Moons - Meta</h1>
+        <div class="sub">2 cuentas: Colombia + México · Anticipos (depósito) · ${LIVE_MODE
+          ? '<span class="badge-live"><span class="dot"></span>En vivo</span>'+(RAW.usedCache?' <span class="cache-note">· semanas cerradas desde caché local</span>':'')
+          : '<span class="badge-live" style="color:var(--amber);background:var(--amber-soft);"><span class="dot" style="background:var(--amber);"></span>Modo archivo — datos al '+((SNAPSHOT&&SNAPSHOT.generated)||'?')+' (con imágenes)</span>'}</div>
+      </div>
+      <div class="filters">
+        <div><label>Semana</label><select id="weekSelect"></select></div>
+        <div><label>País</label><select id="countrySelect">
+          <option value="ALL">Todos</option><option value="MX">México</option><option value="CO">Colombia</option>
+        </select></div>
+      </div>
+    </div>
+    <div id="extrasSlot"></div>
+    <div id="summarySlot"></div>
+    <div id="funnelSlot"></div>
+    <div id="trendsSlot"></div>
+    <div id="tableSlot"></div>
+    <div id="creativesSlot"></div>
+    <div id="learningsSlot"></div>
+    <div id="countrySlot"></div>
+    <div id="placementsSlot"></div>
+    <div id="nextSlot"></div>
+    <div id="methodSlot" style="margin-top:10px;">${renderMethodology()}</div>
+    <div class="small-note" style="margin-top:14px;">Última carga: ${new Date().toLocaleString('es-MX',{dateStyle:'full',timeStyle:'short'})}</div>
+  `;
+  const weekSel = document.getElementById('weekSelect');
+  weekSel.innerHTML = WEEKS_LIST.map((w,i)=>`<option value="${i}">${labelWeekFull(w)}${w.getTime()===currentWeekMonday.getTime()?' (en curso)':''}</option>`).join('');
+  STATE.weekIdx = (function(){ let i=WEEKS_LIST.length-1; if(WEEKS_LIST[i] && WEEKS_LIST[i].getTime()===currentWeekMonday.getTime() && i>0) i--; return i; })();
+  weekSel.value = String(STATE.weekIdx);
+  weekSel.addEventListener('change', e=>{ STATE.weekIdx = parseInt(e.target.value,10); rerenderScoped(); });
+  document.getElementById('countrySelect').addEventListener('change', e=>{
+    STATE.country = e.target.value;
+    STATE.tableCampaigns = []; STATE.trendCampaign = 'ALL'; // los filtros de campaña dependen del país
+    rerenderScoped(); drawCharts();
+  });
+  wireCacheLink();
+
+  document.getElementById('trendsSlot').innerHTML = renderTrends();
+  drawCharts();
+  wireTrend();
+  await rerenderScoped();
+}
+function refreshTrend(){ document.getElementById('trendsSlot').innerHTML = renderTrends(); drawCharts(); wireTrend(); }
+function wireTrend(){
+  document.querySelectorAll('.toggle-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ STATE.trendMode = btn.dataset.trend; refreshTrend(); });
+  });
+  const ms=document.getElementById('trendMetricSel'); if(ms) ms.addEventListener('change', e=>{ STATE.trendMetric=e.target.value; drawCharts(); });
+  const m2=document.getElementById('trendMetric2Sel'); if(m2) m2.addEventListener('change', e=>{ STATE.trendMetric2=e.target.value; drawCharts(); });
+  const cs=document.getElementById('trendCampSel'); if(cs) cs.addEventListener('change', e=>{ STATE.trendCampaign=e.target.value; drawCharts(); });
+}
+function wireCampaignChips(){
+  document.querySelectorAll('.camp-chip').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.camp;
+      if(id==='__clear') STATE.tableCampaigns = [];
+      else if(STATE.tableCampaigns.includes(id)) STATE.tableCampaigns = STATE.tableCampaigns.filter(x=>x!==id);
+      else STATE.tableCampaigns.push(id);
+      document.getElementById('tableSlot').innerHTML = renderWeeklyTable();
+      wireCampaignChips();
+    });
+  });
+}
+function wireCacheLink(){
+  setTimeout(()=>{
+    const l = document.getElementById('clearCacheLink');
+    if(l) l.addEventListener('click', ()=>{ lsDel(CACHE_WEEKS); lsDel(CACHE_MONTHS); lsDel(CACHE_CAMPS); location.reload(); });
+  }, 100);
+}
+async function rerenderScoped(){
+  document.getElementById('summarySlot').innerHTML = renderSummary();
+  document.getElementById('funnelSlot').innerHTML = renderFunnel();
+  document.getElementById('tableSlot').innerHTML = renderWeeklyTable();
+  wireCampaignChips();
+  document.getElementById('extrasSlot').innerHTML = renderExtras();
+  document.getElementById('methodSlot').innerHTML = renderMethodology();
+  wireCacheLink();
+  const {creatives, wk} = await renderCreativesSection(document.getElementById('creativesSlot'));
+  document.getElementById('learningsSlot').innerHTML = renderLearnings(creatives);
+  document.getElementById('countrySlot').innerHTML = renderCountryCompare(wk);
+  document.getElementById('placementsSlot').innerHTML = renderPlacements();
+  wirePlacementSel();
+  document.getElementById('nextSlot').innerHTML = renderNextSteps();
+}
+
+/* ============================================================
+   BOOTSTRAP
+   ============================================================ */
+(async function init(){
+  try{
+    await Promise.all([loadCampaigns(), loadWeekly()]); // en paralelo: son independientes
+    buildDatasets();
+    if(WEEKS_LIST.length===0){
+      document.getElementById('loading').style.display='none';
+      document.getElementById('errorBox').style.display='block';
+      document.getElementById('errorBox').innerHTML = RAW.truncationWarnings.length
+        ? 'Meta no respondió a las consultas (error temporal de su API). Usa el botón de recargar para reintentar.<br><br><span style="font-size:12px;">'+RAW.truncationWarnings.join('<br>')+'</span>'
+        : 'No se encontraron anuncios mx_/co_ con actividad en 2026.';
+      return;
+    }
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+    await renderAll();
+  }catch(err){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('errorBox').style.display='block';
+    document.getElementById('errorBox').textContent = 'Error cargando datos de Meta: '+ (err && err.message ? err.message : String(err));
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>
