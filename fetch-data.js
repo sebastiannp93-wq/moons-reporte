@@ -151,6 +151,19 @@ async function fetchInsights(accId, timeIncrement, since, until){
   return raw.filter(r => (parseFloat(r.impressions)||0) > 0);
 }
 
+// --- UBICACIONES (placements): nivel campaña, desglose por plataforma + posición ---
+const PLACEMENT_DAYS = 90;
+const PLACEMENT_FIELDS = 'campaign_id,campaign_name,spend,impressions,clicks,actions,conversions';
+async function fetchPlacements(accId, since, until){
+  const raw = await graphAll(`act_${accId}/insights`, {
+    level: 'campaign', fields: PLACEMENT_FIELDS,
+    breakdowns: 'publisher_platform,platform_position',
+    time_range: JSON.stringify({ since, until }),
+  });
+  return raw.filter(r => (parseFloat(r.impressions)||0) > 0);
+}
+function pathOf(name){ return /ctwa|whats?app/i.test(name||'') ? 'wa' : 'web'; }
+
 function toReportRow(r, acc){
   const dep = anticipoValue(r.actions);
   const month = (r.date_start||'').slice(0,7);
@@ -183,7 +196,7 @@ function toReportRow(r, acc){
   const today = todayISO();
   console.log('=== Robot Moons: inicio', new Date().toISOString(), '===');
 
-  let weeklyRaw = [], monthlyRaw = [];
+  let weeklyRaw = [], monthlyRaw = [], placementsRaw = [];
   const campaigns = {}, adCreative = {}, creatives = {};
 
   for (const acc of ACCOUNTS){
@@ -222,8 +235,15 @@ function toReportRow(r, acc){
         creatives[String(a.creative.id)] = { thumb:a.creative.thumbnail_url||null, body:a.creative.body||null, title:a.creative.title||null };
       }
     });
+    // UBICACIONES: últimos 90 días, una consulta por cuenta con desglose de placement
+    { const plStart = isoAddDays(today, -PLACEMENT_DAYS);
+      const plRows = await fetchPlacements(acc.id, plStart, today);
+      plRows.forEach(r => r.__acc = acc);
+      placementsRaw = placementsRaw.concat(plRows);
+      await sleep(600);
+    }
   }
-  console.log('Weekly filas:', weeklyRaw.length, '| Monthly filas:', monthlyRaw.length);
+  console.log('Weekly filas:', weeklyRaw.length, '| Monthly filas:', monthlyRaw.length, '| Placements filas:', placementsRaw.length);
 
   // Tasas FX de todos los meses presentes
   const months = [...new Set(weeklyRaw.concat(monthlyRaw).map(r => (r.date_start||'').slice(0,7)).filter(Boolean))].sort();
@@ -234,6 +254,28 @@ function toReportRow(r, acc){
   // A formato reporte
   const weekly = weeklyRaw.map(r => { const o = toReportRow(r, r.__acc); o.creative_id = adCreative[String(r.ad_id)]||null; return o; });
   const monthly = monthlyRaw.map(r => { const o = toReportRow(r, r.__acc); o.creative_id = adCreative[String(r.ad_id)]||null; return o; });
+
+  // A formato ubicaciones: FX del mes más reciente (aprox. para la ventana de 90 días)
+  const latestMonth = months[months.length-1];
+  const placements = placementsRaw.map(r => {
+    const acc = r.__acc;
+    return {
+      campaign_id: String(r.campaign_id||''),
+      campaign_name: r.campaign_name || campaigns[String(r.campaign_id)] || ('Campaña '+r.campaign_id),
+      country: acc.country,
+      path: pathOf(r.campaign_name),
+      platform: r.publisher_platform || '(s/d)',
+      position: r.platform_position || '(s/d)',
+      spendUSD: toUSD(r.spend, latestMonth, acc.currency),
+      impressions: parseFloat(r.impressions)||0,
+      clicks: parseFloat(r.clicks)||0,
+      landing: landingViews(r.actions),
+      lead: pixelCustomConv(r.conversions, LEAD_EVENT),
+      conv: convStarted(r.actions),
+      checkout: customConv(r.actions, acc.checkoutCC),
+      anticipo: anticipoValue(r.actions),
+    };
+  }).filter(p => p.impressions > 0);
 
   // --- VALIDACIÓN: última semana completa, por país (anticipos + gasto USD) ---
   const lastFullWeek = (() => {
@@ -269,6 +311,13 @@ function toReportRow(r, acc){
     console.log(`>>> FUNNEL ${c} semana ${lastFullWeek}: landing=${landing} | lead=${lead} | conversaciones=${conv} | checkout=${chk} | venta=${vta}`);
   }
 
+  // --- DIAGNÓSTICO UBICACIONES: combos plataforma/posición con más depósitos (últimos 90 días) ---
+  { const tally = {};
+    placements.forEach(p => { const k = `${p.country} ${p.platform}/${p.position}`; tally[k] = (tally[k]||0) + p.anticipo; });
+    console.log(`>>> UBICACIONES (${PLACEMENT_DAYS}d) — top combos por depósitos:`);
+    Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([k,v]) => console.log(`     ${k} = ${Math.round(v)} dep`));
+  }
+
   // Previews de los anuncios con más gasto (últimas 6 semanas)
   const sixWeeksAgo = isoAddDays(today, -42);
   const spendByAd = {};
@@ -286,7 +335,7 @@ function toReportRow(r, acc){
 
   const now = new Date();
   const generated = `${String(now.getUTCDate()).padStart(2,'0')}/${String(now.getUTCMonth()+1).padStart(2,'0')}/${now.getUTCFullYear()} ${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')} UTC`;
-  const snap = { generated, campaigns, weekly, monthly, creatives, previews };
+  const snap = { generated, campaigns, weekly, monthly, creatives, previews, placements };
   require('fs').writeFileSync('futura-data.js', 'window.__FUTURA_SNAPSHOT__=' + JSON.stringify(snap) + ';');
-  console.log('=== futura-data.js generado | weekly:', weekly.length, '| generated:', generated, '===');
+  console.log('=== futura-data.js generado | weekly:', weekly.length, '| placements:', placements.length, '| generated:', generated, '===');
 })().catch(e => { console.error('ERROR FATAL:', e); process.exit(1); });
